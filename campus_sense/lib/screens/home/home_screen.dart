@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../services/location_service.dart';
 import '../camera/location_camera_screen.dart';
+import '../history/history_screen.dart';
 import '../map/location_map_screen.dart';
 import '../profile/profile_screen.dart';
 import '../settings/settings_screen.dart';
@@ -150,20 +151,33 @@ class HomeScreen extends StatelessWidget {
         context,
       ).showSnackBar(const SnackBar(content: Text('Obteniendo ubicación...')));
 
+      // Obtiene ubicación y actualiza la
+      // ubicación más reciente en Firestore.
       final posicion = await LocationService.guardarUbicacionActual();
 
-      if (!context.mounted) return;
+      // Guarda una copia adicional dentro
+      // del historial del usuario.
+      await LocationService.guardarEnHistorial(posicion);
+
+      if (!context.mounted) {
+        return;
+      }
 
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
-      Navigator.push(
-        context,
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ubicación guardada en el historial.')),
+      );
+
+      Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => LocationMapScreen(initialPosition: posicion),
         ),
       );
     } catch (e) {
-      if (!context.mounted) return;
+      if (!context.mounted) {
+        return;
+      }
 
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
@@ -178,20 +192,26 @@ class HomeScreen extends StatelessWidget {
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Cargando mapa...')));
 
+      // Solo obtiene ubicación.
+      // Este botón NO crea un registro
+      // dentro del historial.
       final posicion = await LocationService.obtenerUbicacionActual();
 
-      if (!context.mounted) return;
+      if (!context.mounted) {
+        return;
+      }
 
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
-      Navigator.push(
-        context,
+      Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => LocationMapScreen(initialPosition: posicion),
         ),
       );
     } catch (e) {
-      if (!context.mounted) return;
+      if (!context.mounted) {
+        return;
+      }
 
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
@@ -220,6 +240,20 @@ class HomeScreen extends StatelessWidget {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Scaffold(
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'No se pudo cargar el usuario:\n${snapshot.error}',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
           );
         }
 
@@ -258,7 +292,9 @@ class HomeScreen extends StatelessWidget {
                 onSelected: (value) {
                   if (value == 'logout') {
                     WidgetsBinding.instance.addPostFrameCallback((_) async {
-                      if (!context.mounted) return;
+                      if (!context.mounted) {
+                        return;
+                      }
 
                       await _confirmarSalir(context);
                     });
@@ -267,7 +303,9 @@ class HomeScreen extends StatelessWidget {
                   }
 
                   WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (!context.mounted) return;
+                    if (!context.mounted) {
+                      return;
+                    }
 
                     if (value == 'profile') {
                       Navigator.of(context).push(
@@ -417,8 +455,7 @@ class HomeScreen extends StatelessWidget {
                             icon: Icons.settings_outlined,
                             label: 'Ajustes',
                             onPressed: () {
-                              Navigator.push(
-                                context,
+                              Navigator.of(context).push(
                                 MaterialPageRoute(
                                   builder: (_) => const SettingsScreen(),
                                 ),
@@ -432,8 +469,7 @@ class HomeScreen extends StatelessWidget {
                             icon: Icons.person_outline,
                             label: 'Perfil',
                             onPressed: () {
-                              Navigator.push(
-                                context,
+                              Navigator.of(context).push(
                                 MaterialPageRoute(
                                   builder: (_) => const ProfileScreen(),
                                 ),
@@ -455,16 +491,22 @@ class HomeScreen extends StatelessWidget {
 
                       const SizedBox(height: 16),
 
+                      // =========================
+                      // MI UBICACIÓN
+                      // =========================
                       _mainButton(
                         context: context,
                         icon: Icons.my_location_outlined,
                         title: 'Mi ubicación',
-                        subtitle: 'Ver y guardar dónde estoy actualmente.',
+                        subtitle: 'Ver mi ubicación y guardar un registro en el historial.',
                         onTap: () {
                           _abrirMiUbicacion(context);
                         },
                       ),
 
+                      // =========================
+                      // MAPA
+                      // =========================
                       _mainButton(
                         context: context,
                         icon: Icons.map_outlined,
@@ -475,6 +517,24 @@ class HomeScreen extends StatelessWidget {
                         },
                       ),
 
+                      // =========================
+                      // HISTORIAL
+                      // =========================
+                      _mainButton(
+                        context: context,
+                        icon: Icons.history,
+                        title: 'Historial de ubicaciones',
+                        subtitle: 'Consultar las ubicaciones que he guardado.',
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => HistoryScreen()),
+                          );
+                        },
+                      ),
+
+                      // =========================
+                      // CÁMARA
+                      // =========================
                       _mainButton(
                         context: context,
                         icon: Icons.camera_alt_outlined,
@@ -482,8 +542,7 @@ class HomeScreen extends StatelessWidget {
                         subtitle:
                             'Usar la cámara y ver mi ubicación en tiempo real.',
                         onTap: () {
-                          Navigator.push(
-                            context,
+                          Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => const LocationCameraScreen(),
                             ),
