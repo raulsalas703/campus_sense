@@ -7,9 +7,7 @@ class ProfileScreen extends StatelessWidget {
     super.key,
   });
 
-  String _nombreRol(
-    String rol,
-  ) {
+  String _nombreRol(String rol) {
     switch (rol) {
       case 'admin':
         return 'Administrador';
@@ -23,9 +21,7 @@ class ProfileScreen extends StatelessWidget {
     }
   }
 
-  IconData _iconoRol(
-    String rol,
-  ) {
+  IconData _iconoRol(String rol) {
     switch (rol) {
       case 'admin':
         return Icons.admin_panel_settings_outlined;
@@ -39,147 +35,38 @@ class ProfileScreen extends StatelessWidget {
     }
   }
 
-  Future<void> _editarNombre(
-    BuildContext context,
-    String nombreActual,
-  ) async {
-    final controller = TextEditingController(
-      text: nombreActual,
-    );
-
-    final nuevoNombre =
-        await showDialog<String>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text(
-            'Editar nombre',
-          ),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            textCapitalization:
-                TextCapitalization.words,
-            decoration: const InputDecoration(
-              labelText: 'Nombre',
-              prefixIcon:
-                  Icon(Icons.person_outline),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text(
-                'Cancelar',
-              ),
-            ),
-            FilledButton(
-              onPressed: () {
-                final nombre =
-                    controller.text.trim();
-
-                if (nombre.isEmpty) {
-                  return;
-                }
-
-                Navigator.pop(
-                  context,
-                  nombre,
-                );
-              },
-              child: const Text(
-                'Guardar',
-              ),
-            ),
-          ],
-        );
-      },
-    );
-
-    controller.dispose();
-
-    if (nuevoNombre == null ||
-        nuevoNombre.trim().isEmpty) {
-      return;
-    }
-
-    final user =
-        FirebaseAuth.instance.currentUser;
-
-    if (user == null) {
-      return;
-    }
-
-    try {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .set({
-        'nombre': nuevoNombre.trim(),
-      }, SetOptions(merge: true));
-
-      await user.updateDisplayName(
-        nuevoNombre.trim(),
-      );
-
-      if (!context.mounted) return;
-
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Nombre actualizado correctamente.',
-          ),
-        ),
-      );
-    } catch (e) {
-      if (!context.mounted) return;
-
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-        SnackBar(
-          content: Text(
-            'No se pudo actualizar el nombre: $e',
-          ),
-        ),
-      );
-    }
-  }
-
   Widget _datoPerfil({
     required BuildContext context,
     required IconData icon,
     required String titulo,
     required String valor,
   }) {
-    final colorScheme =
-        Theme.of(context).colorScheme;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Card(
-      margin:
-          const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(
+        bottom: 12,
+      ),
       child: Padding(
-        padding:
-            const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(
+          16,
+        ),
         child: Row(
           children: [
             Container(
               width: 46,
               height: 46,
               decoration: BoxDecoration(
-                color: colorScheme.primary
-                    .withValues(
+                color: colorScheme.primary.withValues(
                   alpha: 0.12,
                 ),
-                borderRadius:
-                    BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(
+                  14,
+                ),
               ),
               child: Icon(
                 icon,
-                color:
-                    colorScheme.primary,
+                color: colorScheme.primary,
               ),
             ),
             const SizedBox(
@@ -194,8 +81,8 @@ class ProfileScreen extends StatelessWidget {
                     titulo,
                     style: TextStyle(
                       fontSize: 13,
-                      color: colorScheme
-                          .onSurfaceVariant,
+                      color:
+                          colorScheme.onSurfaceVariant,
                     ),
                   ),
                   const SizedBox(
@@ -203,11 +90,9 @@ class ProfileScreen extends StatelessWidget {
                   ),
                   Text(
                     valor,
-                    style:
-                        const TextStyle(
+                    style: const TextStyle(
                       fontSize: 16,
-                      fontWeight:
-                          FontWeight.w600,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
@@ -259,8 +144,21 @@ class ProfileScreen extends StatelessWidget {
           if (snapshot.connectionState ==
               ConnectionState.waiting) {
             return const Center(
-              child:
-                  CircularProgressIndicator(),
+              child: CircularProgressIndicator(),
+            );
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(
+                  24,
+                ),
+                child: Text(
+                  'No se pudo cargar el perfil:\n${snapshot.error}',
+                  textAlign: TextAlign.center,
+                ),
+              ),
             );
           }
 
@@ -302,19 +200,17 @@ class ProfileScreen extends StatelessWidget {
                   : (user.email ??
                       'Sin correo');
 
-          final letra =
-              nombre.isNotEmpty
-                  ? nombre[0]
-                      .toUpperCase()
-                  : 'U';
+          final letra = nombre.isNotEmpty
+              ? nombre[0].toUpperCase()
+              : 'U';
 
           final colorScheme =
-              Theme.of(context)
-                  .colorScheme;
+              Theme.of(context).colorScheme;
 
           return SingleChildScrollView(
-            padding:
-                const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(
+              24,
+            ),
             child: Center(
               child: ConstrainedBox(
                 constraints:
@@ -333,8 +229,7 @@ class ProfileScreen extends StatelessWidget {
                           colorScheme.primary,
                       child: Text(
                         letra,
-                        style:
-                            const TextStyle(
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 38,
                           fontWeight:
@@ -351,8 +246,7 @@ class ProfileScreen extends StatelessWidget {
                       nombre,
                       textAlign:
                           TextAlign.center,
-                      style:
-                          const TextStyle(
+                      style: const TextStyle(
                         fontSize: 25,
                         fontWeight:
                             FontWeight.bold,
@@ -365,20 +259,22 @@ class ProfileScreen extends StatelessWidget {
 
                     Row(
                       mainAxisAlignment:
-                          MainAxisAlignment
-                              .center,
+                          MainAxisAlignment.center,
                       children: [
                         Icon(
-                          _iconoRol(rol),
+                          _iconoRol(
+                            rol,
+                          ),
                           size: 18,
                         ),
                         const SizedBox(
                           width: 6,
                         ),
                         Text(
-                          _nombreRol(rol),
-                          style:
-                              TextStyle(
+                          _nombreRol(
+                            rol,
+                          ),
+                          style: TextStyle(
                             color: colorScheme
                                 .onSurfaceVariant,
                           ),
@@ -422,15 +318,20 @@ class ProfileScreen extends StatelessWidget {
                     ),
 
                     SizedBox(
-                      width:
-                          double.infinity,
+                      width: double.infinity,
                       height: 50,
-                      child:
-                          FilledButton.icon(
-                        onPressed: () {
-                          _editarNombre(
+                      child: FilledButton.icon(
+                        onPressed: () async {
+                          await Navigator.of(
                             context,
-                            nombre,
+                          ).push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  EditNameScreen(
+                                nombreActual:
+                                    nombre,
+                              ),
+                            ),
                           );
                         },
                         icon: const Icon(
@@ -447,6 +348,256 @@ class ProfileScreen extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class EditNameScreen
+    extends StatefulWidget {
+  final String nombreActual;
+
+  const EditNameScreen({
+    super.key,
+    required this.nombreActual,
+  });
+
+  @override
+  State<EditNameScreen> createState() =>
+      _EditNameScreenState();
+}
+
+class _EditNameScreenState
+    extends State<EditNameScreen> {
+  late final TextEditingController
+      _nombreController;
+
+  bool _guardando = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _nombreController =
+        TextEditingController(
+      text: widget.nombreActual,
+    );
+  }
+
+  @override
+  void dispose() {
+    _nombreController.dispose();
+
+    super.dispose();
+  }
+
+  Future<void> _guardarNombre() async {
+    if (_guardando) {
+      return;
+    }
+
+    final nombre =
+        _nombreController.text.trim();
+
+    if (nombre.isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Escribe un nombre.',
+          ),
+        ),
+      );
+
+      return;
+    }
+
+    final user =
+        FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No hay una sesión activa.',
+          ),
+        ),
+      );
+
+      return;
+    }
+
+    setState(() {
+      _guardando = true;
+    });
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .set(
+        {
+          'nombre': nombre,
+        },
+        SetOptions(
+          merge: true,
+        ),
+      );
+
+      await user.updateDisplayName(
+        nombre,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Nombre actualizado correctamente.',
+          ),
+        ),
+      );
+
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        SnackBar(
+          content: Text(
+            'No se pudo actualizar el nombre: $e',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _guardando = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(
+    BuildContext context,
+  ) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Editar nombre',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(
+              24,
+            ),
+            child: ConstrainedBox(
+              constraints:
+                  const BoxConstraints(
+                maxWidth: 600,
+              ),
+              child: Column(
+                crossAxisAlignment:
+                    CrossAxisAlignment.stretch,
+                children: [
+                  const Icon(
+                    Icons.person_outline,
+                    size: 70,
+                  ),
+
+                  const SizedBox(
+                    height: 24,
+                  ),
+
+                  const Text(
+                    'Nombre de perfil',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight:
+                          FontWeight.bold,
+                    ),
+                  ),
+
+                  const SizedBox(
+                    height: 8,
+                  ),
+
+                  const Text(
+                    'Este nombre se mostrará en tu cuenta de Campus Sense.',
+                  ),
+
+                  const SizedBox(
+                    height: 24,
+                  ),
+
+                  TextField(
+                    controller:
+                        _nombreController,
+                    textCapitalization:
+                        TextCapitalization.words,
+                    textInputAction:
+                        TextInputAction.done,
+                    onSubmitted: (_) {
+                      _guardarNombre();
+                    },
+                    decoration:
+                        const InputDecoration(
+                      labelText: 'Nombre',
+                      prefixIcon: Icon(
+                        Icons.person_outline,
+                      ),
+                      border:
+                          OutlineInputBorder(),
+                    ),
+                  ),
+
+                  const SizedBox(
+                    height: 24,
+                  ),
+
+                  SizedBox(
+                    height: 50,
+                    child: FilledButton.icon(
+                      onPressed: _guardando
+                          ? null
+                          : _guardarNombre,
+                      icon: _guardando
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child:
+                                  CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.save_outlined,
+                            ),
+                      label: Text(
+                        _guardando
+                            ? 'Guardando...'
+                            : 'Guardar cambios',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

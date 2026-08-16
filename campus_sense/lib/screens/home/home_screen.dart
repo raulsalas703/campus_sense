@@ -9,43 +9,27 @@ import '../profile/profile_screen.dart';
 import '../settings/settings_screen.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({
-    super.key,
-  });
+  const HomeScreen({super.key});
 
-  Future<void> _confirmarSalir(
-    BuildContext context,
-  ) async {
-    final salir =
-        await showDialog<bool>(
+  Future<void> _confirmarSalir(BuildContext context) async {
+    final salir = await showDialog<bool>(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title:
-              const Text('Cerrar sesión'),
-          content: const Text(
-            '¿Seguro que quieres salir?',
-          ),
+          title: const Text('Cerrar sesión'),
+          content: const Text('¿Seguro que quieres salir?'),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(
-                  context,
-                  false,
-                );
+                Navigator.pop(context, false);
               },
-              child:
-                  const Text('Cancelar'),
+              child: const Text('Cancelar'),
             ),
             FilledButton(
               onPressed: () {
-                Navigator.pop(
-                  context,
-                  true,
-                );
+                Navigator.pop(context, true);
               },
-              child:
-                  const Text('Salir'),
+              child: const Text('Salir'),
             ),
           ],
         );
@@ -53,14 +37,11 @@ class HomeScreen extends StatelessWidget {
     );
 
     if (salir == true) {
-      await FirebaseAuth.instance
-          .signOut();
+      await FirebaseAuth.instance.signOut();
     }
   }
 
-  String _nombreRol(
-    String rol,
-  ) {
+  String _nombreRol(String rol) {
     switch (rol) {
       case 'admin':
         return 'Administrador';
@@ -74,13 +55,10 @@ class HomeScreen extends StatelessWidget {
     }
   }
 
-  IconData _iconoRol(
-    String rol,
-  ) {
+  IconData _iconoRol(String rol) {
     switch (rol) {
       case 'admin':
-        return Icons
-            .admin_panel_settings_outlined;
+        return Icons.admin_panel_settings_outlined;
 
       case 'teacher':
         return Icons.school_outlined;
@@ -101,13 +79,8 @@ class HomeScreen extends StatelessWidget {
         onPressed: onPressed,
         icon: Icon(icon),
         label: Text(label),
-        style:
-            OutlinedButton.styleFrom(
-          padding:
-              const EdgeInsets.symmetric(
-            vertical: 16,
-            horizontal: 12,
-          ),
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
         ),
       ),
     );
@@ -120,78 +93,50 @@ class HomeScreen extends StatelessWidget {
     required String subtitle,
     required VoidCallback onTap,
   }) {
-    final colorScheme =
-        Theme.of(context).colorScheme;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Card(
-      margin:
-          const EdgeInsets.only(
-        bottom: 14,
-      ),
+      margin: const EdgeInsets.only(bottom: 14),
       child: InkWell(
-        borderRadius:
-            BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12),
         onTap: onTap,
         child: Padding(
-          padding:
-              const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(18),
           child: Row(
             children: [
               Container(
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
-                  color: colorScheme.primary
-                      .withValues(
-                    alpha: 0.12,
-                  ),
-                  borderRadius:
-                      BorderRadius.circular(
-                    14,
-                  ),
+                  color: colorScheme.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(
-                  icon,
-                  size: 28,
-                  color:
-                      colorScheme.primary,
-                ),
+                child: Icon(icon, size: 28, color: colorScheme.primary),
               ),
-              const SizedBox(
-                width: 16,
-              ),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment
-                          .start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       title,
-                      style:
-                          const TextStyle(
+                      style: const TextStyle(
                         fontSize: 17,
-                        fontWeight:
-                            FontWeight.bold,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(
-                      height: 4,
-                    ),
+                    const SizedBox(height: 4),
                     Text(
                       subtitle,
                       style: TextStyle(
                         fontSize: 14,
-                        color: colorScheme
-                            .onSurfaceVariant,
+                        color: colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
                 ),
               ),
-              const Icon(
-                Icons.chevron_right,
-              ),
+              const Icon(Icons.chevron_right),
             ],
           ),
         ),
@@ -199,283 +144,172 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _abrirMiUbicacion(
-    BuildContext context,
-  ) async {
+  Future<void> _abrirMiUbicacion(BuildContext context) async {
     try {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Obteniendo ubicación...',
-          ),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Obteniendo ubicación...')));
 
-      final posicion =
-          await LocationService
-              .guardarUbicacionActual();
+      final posicion = await LocationService.guardarUbicacionActual();
 
       if (!context.mounted) return;
 
-      ScaffoldMessenger.of(context)
-          .hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) =>
-              LocationMapScreen(
-            initialPosition:
-                posicion,
-          ),
+          builder: (_) => LocationMapScreen(initialPosition: posicion),
         ),
       );
     } catch (e) {
       if (!context.mounted) return;
 
-      ScaffoldMessenger.of(context)
-          .hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-        SnackBar(
-          content: Text(
-            'No se pudo obtener la ubicación: $e',
-          ),
-        ),
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo obtener la ubicación: $e')),
       );
     }
   }
 
-  Future<void> _abrirMapa(
-    BuildContext context,
-  ) async {
+  Future<void> _abrirMapa(BuildContext context) async {
     try {
       ScaffoldMessenger.of(context)
-          .showSnackBar(
-        const SnackBar(
-          content:
-              Text('Cargando mapa...'),
-        ),
-      );
+          .showSnackBar(const SnackBar(content: Text('Cargando mapa...')));
 
-      final posicion =
-          await LocationService
-              .obtenerUbicacionActual();
+      final posicion = await LocationService.obtenerUbicacionActual();
 
       if (!context.mounted) return;
 
-      ScaffoldMessenger.of(context)
-          .hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) =>
-              LocationMapScreen(
-            initialPosition:
-                posicion,
-          ),
+          builder: (_) => LocationMapScreen(initialPosition: posicion),
         ),
       );
     } catch (e) {
       if (!context.mounted) return;
 
-      ScaffoldMessenger.of(context)
-          .hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-        SnackBar(
-          content: Text(
-            'No se pudo abrir el mapa: $e',
-          ),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('No se pudo abrir el mapa: $e')));
     }
   }
 
   @override
-  Widget build(
-    BuildContext context,
-  ) {
-    final user =
-        FirebaseAuth.instance.currentUser;
+  Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
       return const Scaffold(
-        body: Center(
-          child: Text(
-            'No hay una sesión activa.',
-          ),
-        ),
+        body: Center(child: Text('No hay una sesión activa.')),
       );
     }
 
-    return StreamBuilder<
-        DocumentSnapshot<
-            Map<String, dynamic>>>(
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .snapshots(),
-      builder: (
-        context,
-        snapshot,
-      ) {
-        if (snapshot.connectionState ==
-            ConnectionState.waiting) {
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-            body: Center(
-              child:
-                  CircularProgressIndicator(),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
 
-        final datos =
-            snapshot.data?.data();
+        final datos = snapshot.data?.data();
 
-        final nombreFirestore =
-            datos?['nombre']
-                    ?.toString()
-                    .trim() ??
-                '';
+        final nombreFirestore = datos?['nombre']?.toString().trim() ?? '';
 
-        final correoFirestore =
-            datos?['correo']
-                    ?.toString()
-                    .trim() ??
-                '';
+        final correoFirestore = datos?['correo']?.toString().trim() ?? '';
 
-        final rolFirestore =
-            datos?['rol']
-                    ?.toString()
-                    .trim() ??
-                'student';
+        final rolFirestore = datos?['rol']?.toString().trim() ?? 'student';
 
-        final nombreMostrar =
-            nombreFirestore.isNotEmpty
-                ? nombreFirestore
-                : (user.displayName
-                            ?.trim()
-                            .isNotEmpty ==
-                        true
-                    ? user.displayName!
-                        .trim()
-                    : 'Estudiante');
+        final nombreMostrar = nombreFirestore.isNotEmpty
+            ? nombreFirestore
+            : (user.displayName?.trim().isNotEmpty == true
+                  ? user.displayName!.trim()
+                  : 'Estudiante');
 
-        final correoMostrar =
-            correoFirestore.isNotEmpty
-                ? correoFirestore
-                : (user.email ??
-                    'Sin correo');
+        final correoMostrar = correoFirestore.isNotEmpty
+            ? correoFirestore
+            : (user.email ?? 'Sin correo');
 
-        final rolMostrar =
-            _nombreRol(
-          rolFirestore,
-        );
+        final rolMostrar = _nombreRol(rolFirestore);
 
-        final colorScheme =
-            Theme.of(context)
-                .colorScheme;
+        final colorScheme = Theme.of(context).colorScheme;
 
         return Scaffold(
           appBar: AppBar(
             title: const Text(
               'Campus Sense',
-              style: TextStyle(
-                fontWeight:
-                    FontWeight.bold,
-              ),
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
             actions: [
               PopupMenuButton<String>(
                 tooltip: 'Cuenta',
-                icon: const Icon(
-                  Icons
-                      .account_circle_outlined,
-                ),
-                onSelected:
-                    (value) async {
-                  if (value ==
-                      'profile') {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            const ProfileScreen(),
-                      ),
-                    );
+                icon: const Icon(Icons.account_circle_outlined),
+                onSelected: (value) {
+                  if (value == 'logout') {
+                    WidgetsBinding.instance.addPostFrameCallback((_) async {
+                      if (!context.mounted) return;
+
+                      await _confirmarSalir(context);
+                    });
+
+                    return;
                   }
 
-                  if (value ==
-                      'settings') {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            const SettingsScreen(),
-                      ),
-                    );
-                  }
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!context.mounted) return;
 
-                  if (value ==
-                      'logout') {
-                    await _confirmarSalir(
-                      context,
-                    );
-                  }
+                    if (value == 'profile') {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const ProfileScreen(),
+                        ),
+                      );
+                    }
+
+                    if (value == 'settings') {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const SettingsScreen(),
+                        ),
+                      );
+                    }
+                  });
                 },
                 itemBuilder: (context) {
                   return [
                     PopupMenuItem<String>(
                       enabled: false,
                       child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment
-                                .start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             nombreMostrar,
-                            style:
-                                const TextStyle(
-                              fontWeight:
-                                  FontWeight
-                                      .bold,
-                            ),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
-                          const SizedBox(
-                            height: 4,
-                          ),
+                          const SizedBox(height: 4),
                           Text(
                             correoMostrar,
-                            style:
-                                const TextStyle(
-                              fontSize: 13,
-                            ),
+                            style: const TextStyle(fontSize: 13),
                           ),
-                          const SizedBox(
-                            height: 6,
-                          ),
+                          const SizedBox(height: 6),
                           Row(
                             children: [
-                              Icon(
-                                _iconoRol(
-                                  rolFirestore,
-                                ),
-                                size: 17,
-                              ),
-                              const SizedBox(
-                                width: 6,
-                              ),
+                              Icon(_iconoRol(rolFirestore), size: 17),
+                              const SizedBox(width: 6),
                               Text(
                                 rolMostrar,
-                                style:
-                                    const TextStyle(
-                                  fontSize: 13,
-                                ),
+                                style: const TextStyle(fontSize: 13),
                               ),
                             ],
                           ),
@@ -485,60 +319,37 @@ class HomeScreen extends StatelessWidget {
 
                     const PopupMenuDivider(),
 
-                    const PopupMenuItem<
-                        String>(
+                    const PopupMenuItem<String>(
                       value: 'profile',
                       child: Row(
                         children: [
-                          Icon(
-                            Icons
-                                .person_outline,
-                          ),
-                          SizedBox(
-                            width: 10,
-                          ),
-                          Text(
-                            'Mi perfil',
-                          ),
+                          Icon(Icons.person_outline),
+                          SizedBox(width: 10),
+                          Text('Mi perfil'),
                         ],
                       ),
                     ),
 
-                    const PopupMenuItem<
-                        String>(
+                    const PopupMenuItem<String>(
                       value: 'settings',
                       child: Row(
                         children: [
-                          Icon(
-                            Icons
-                                .settings_outlined,
-                          ),
-                          SizedBox(
-                            width: 10,
-                          ),
-                          Text(
-                            'Ajustes',
-                          ),
+                          Icon(Icons.settings_outlined),
+                          SizedBox(width: 10),
+                          Text('Ajustes'),
                         ],
                       ),
                     ),
 
                     const PopupMenuDivider(),
 
-                    const PopupMenuItem<
-                        String>(
+                    const PopupMenuItem<String>(
                       value: 'logout',
                       child: Row(
                         children: [
-                          Icon(
-                            Icons.logout,
-                          ),
-                          SizedBox(
-                            width: 10,
-                          ),
-                          Text(
-                            'Cerrar sesión',
-                          ),
+                          Icon(Icons.logout),
+                          SizedBox(width: 10),
+                          Text('Cerrar sesión'),
                         ],
                       ),
                     ),
@@ -546,120 +357,85 @@ class HomeScreen extends StatelessWidget {
                 },
               ),
 
-              const SizedBox(
-                width: 8,
-              ),
+              const SizedBox(width: 8),
             ],
           ),
 
           body: SafeArea(
             child: Center(
               child: ConstrainedBox(
-                constraints:
-                    const BoxConstraints(
-                  maxWidth: 900,
-                ),
-                child:
-                    SingleChildScrollView(
-                  padding:
-                      const EdgeInsets.all(
-                    24,
-                  ),
+                constraints: const BoxConstraints(maxWidth: 900),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
                   child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment
-                            .start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'Hola, $nombreMostrar 👋',
-                        style:
-                            const TextStyle(
+                        style: const TextStyle(
                           fontSize: 28,
-                          fontWeight:
-                              FontWeight.bold,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
 
-                      const SizedBox(
-                        height: 8,
-                      ),
+                      const SizedBox(height: 8),
 
                       Text(
                         'Bienvenido a Campus Sense',
                         style: TextStyle(
                           fontSize: 16,
-                          color: colorScheme
-                              .onSurfaceVariant,
+                          color: colorScheme.onSurfaceVariant,
                         ),
                       ),
 
-                      const SizedBox(
-                        height: 10,
-                      ),
+                      const SizedBox(height: 10),
 
                       Row(
                         children: [
                           Icon(
-                            _iconoRol(
-                              rolFirestore,
-                            ),
+                            _iconoRol(rolFirestore),
                             size: 18,
-                            color: colorScheme
-                                .onSurfaceVariant,
+                            color: colorScheme.onSurfaceVariant,
                           ),
-                          const SizedBox(
-                            width: 6,
-                          ),
+                          const SizedBox(width: 6),
                           Text(
                             rolMostrar,
-                            style:
-                                TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
-                              color: colorScheme
-                                  .onSurfaceVariant,
-                              fontWeight:
-                                  FontWeight
-                                      .w500,
+                              color: colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
                       ),
 
-                      const SizedBox(
-                        height: 24,
-                      ),
+                      const SizedBox(height: 24),
 
                       Row(
                         children: [
                           _topButton(
-                            icon: Icons
-                                .settings_outlined,
+                            icon: Icons.settings_outlined,
                             label: 'Ajustes',
                             onPressed: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) =>
-                                      const SettingsScreen(),
+                                  builder: (_) => const SettingsScreen(),
                                 ),
                               );
                             },
                           ),
 
-                          const SizedBox(
-                            width: 12,
-                          ),
+                          const SizedBox(width: 12),
 
                           _topButton(
-                            icon: Icons
-                                .person_outline,
+                            icon: Icons.person_outline,
                             label: 'Perfil',
                             onPressed: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) =>
-                                      const ProfileScreen(),
+                                  builder: (_) => const ProfileScreen(),
                                 ),
                               );
                             },
@@ -667,90 +443,63 @@ class HomeScreen extends StatelessWidget {
                         ],
                       ),
 
-                      const SizedBox(
-                        height: 30,
-                      ),
+                      const SizedBox(height: 30),
 
                       const Text(
                         '¿Qué quieres hacer?',
                         style: TextStyle(
                           fontSize: 20,
-                          fontWeight:
-                              FontWeight.bold,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
 
-                      const SizedBox(
-                        height: 16,
-                      ),
+                      const SizedBox(height: 16),
 
                       _mainButton(
                         context: context,
-                        icon: Icons
-                            .my_location_outlined,
-                        title:
-                            'Mi ubicación',
-                        subtitle:
-                            'Ver y guardar dónde estoy actualmente.',
+                        icon: Icons.my_location_outlined,
+                        title: 'Mi ubicación',
+                        subtitle: 'Ver y guardar dónde estoy actualmente.',
                         onTap: () {
-                          _abrirMiUbicacion(
-                            context,
-                          );
+                          _abrirMiUbicacion(context);
                         },
                       ),
 
                       _mainButton(
                         context: context,
-                        icon:
-                            Icons.map_outlined,
-                        title:
-                            'Mapa del campus',
-                        subtitle:
-                            'Explorar el mapa y ver mi posición.',
+                        icon: Icons.map_outlined,
+                        title: 'Mapa del campus',
+                        subtitle: 'Explorar el mapa y ver mi posición.',
                         onTap: () {
-                          _abrirMapa(
-                            context,
-                          );
+                          _abrirMapa(context);
                         },
                       ),
 
                       _mainButton(
                         context: context,
-                        icon: Icons
-                            .camera_alt_outlined,
-                        title:
-                            'Cámara con ubicación',
+                        icon: Icons.camera_alt_outlined,
+                        title: 'Cámara con ubicación',
                         subtitle:
                             'Usar la cámara y ver mi ubicación en tiempo real.',
                         onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) =>
-                                  const LocationCameraScreen(),
+                              builder: (_) => const LocationCameraScreen(),
                             ),
                           );
                         },
                       ),
 
-                      const SizedBox(
-                        height: 20,
-                      ),
+                      const SizedBox(height: 20),
 
                       Center(
-                        child:
-                            TextButton.icon(
+                        child: TextButton.icon(
                           onPressed: () {
-                            _confirmarSalir(
-                              context,
-                            );
+                            _confirmarSalir(context);
                           },
-                          icon: const Icon(
-                            Icons.logout,
-                          ),
-                          label: const Text(
-                            'Cerrar sesión',
-                          ),
+                          icon: const Icon(Icons.logout),
+                          label: const Text('Cerrar sesión'),
                         ),
                       ),
                     ],

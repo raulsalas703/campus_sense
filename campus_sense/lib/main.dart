@@ -1,40 +1,26 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'app/app.dart';
+import 'firebase_options.dart';
 import 'providers/theme_provider.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Aquí dejas también Firebase.initializeApp(...)
-  // si ya lo tienes configurado.
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(
+        ChangeNotifierProvider<ThemeProvider>(
           create: (_) => ThemeProvider(),
         ),
       ],
       child: const CampusSenseApp(),
     ),
   );
-}
-
-class CampusSenseApp extends StatelessWidget {
-  const CampusSenseApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final themeProvider = context.watch<ThemeProvider>();
-
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-
-      // Aquí va tu configuración actual de theme
-      themeMode: themeProvider.themeMode,
-
-      home: const YourInitialScreen(),
-    );
-  }
 }
