@@ -60,8 +60,6 @@ class _LocationCameraScreenState
       CameraController? controllerFuncionando;
       String? ultimoError;
 
-      // Probamos todas las cámaras disponibles
-      // hasta encontrar una que sí pueda abrirse.
       for (final camera in cameras) {
         final controller = CameraController(
           camera,
@@ -99,6 +97,7 @@ class _LocationCameraScreenState
               'No se pudo abrir ninguna cámara.\n\n'
               '${ultimoError ?? 'Revisa los permisos de cámara.'}\n\n'
               'Asegúrate de que ninguna otra aplicación esté usando la cámara.';
+
           _loadingCamera = false;
         });
 
@@ -117,6 +116,7 @@ class _LocationCameraScreenState
         _errorCamera =
             'No se pudo abrir la cámara.\n\n'
             '${e.description ?? e.code}';
+
         _loadingCamera = false;
       });
     } catch (e) {
@@ -125,6 +125,7 @@ class _LocationCameraScreenState
       setState(() {
         _errorCamera =
             'No se pudo acceder a la cámara.\n\n$e';
+
         _loadingCamera = false;
       });
     }
@@ -188,6 +189,11 @@ class _LocationCameraScreenState
       final position =
           await LocationService.guardarUbicacionActual();
 
+      // Guardamos también este registro en el historial.
+      await LocationService.guardarEnHistorial(
+        position,
+      );
+
       if (!mounted) return;
 
       setState(() {
@@ -198,7 +204,7 @@ class _LocationCameraScreenState
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Ubicación actualizada.',
+            'Ubicación actualizada y guardada.',
           ),
         ),
       );
@@ -328,8 +334,8 @@ class _LocationCameraScreenState
               const SizedBox(height: 16),
 
               const Text(
-                'También revisa que Chrome tenga permiso para usar la cámara '
-                'y que ninguna otra aplicación la esté utilizando.',
+                'Revisa que la aplicación tenga permiso para usar '
+                'la cámara y que ninguna otra aplicación la esté utilizando.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white70,
@@ -361,7 +367,6 @@ class _LocationCameraScreenState
       children: [
         _buildCameraPreview(controller),
 
-        // Indicador superior
         Positioned(
           top: 18,
           left: 18,
@@ -397,7 +402,6 @@ class _LocationCameraScreenState
           ),
         ),
 
-        // Información de ubicación
         Positioned(
           left: 0,
           right: 0,

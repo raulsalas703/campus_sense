@@ -45,6 +45,8 @@ class LocationService {
     );
   }
 
+  // Obtiene la ubicación y actualiza la ubicación más reciente
+  // del usuario en Firestore.
   static Future<Position> guardarUbicacionActual() async {
     final user = FirebaseAuth.instance.currentUser;
 
@@ -59,6 +61,7 @@ class LocationService {
     return posicion;
   }
 
+  // Guarda solamente la ubicación más reciente.
   static Future<void> guardarPosicion(
     Position posicion,
   ) async {
@@ -80,6 +83,32 @@ class LocationService {
     });
   }
 
+  // Crea un registro nuevo dentro del historial
+  // del usuario.
+  static Future<void> guardarEnHistorial(
+    Position posicion,
+  ) async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      throw Exception('No hay una sesión iniciada.');
+    }
+
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('location_history')
+        .add({
+      'uid': user.uid,
+      'latitud': posicion.latitude,
+      'longitud': posicion.longitude,
+      'precision': posicion.accuracy,
+      'fecha': FieldValue.serverTimestamp(),
+    });
+  }
+
+  // Sigue mostrando la posición en tiempo real,
+  // pero NO guarda cada movimiento en Firestore.
   static Stream<Position> escucharUbicacion() {
     const configuracion = LocationSettings(
       accuracy: LocationAccuracy.high,
