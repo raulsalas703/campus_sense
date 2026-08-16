@@ -7,8 +7,8 @@ import '../screens/auth/login_screen.dart';
 import '../screens/home/home_screen.dart';
 import 'theme.dart';
 
-class CampusSenseApp extends StatelessWidget {
-  const CampusSenseApp({
+class GeoSenseApp extends StatelessWidget {
+  const GeoSenseApp({
     super.key,
   });
 
@@ -19,7 +19,7 @@ class CampusSenseApp extends StatelessWidget {
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Campus Sense',
+      title: 'GeoSense',
 
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
@@ -41,12 +41,16 @@ class AuthGate extends StatelessWidget {
     return StreamBuilder<User?>(
       stream:
           FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
+      builder: (
+        context,
+        snapshot,
+      ) {
         if (snapshot.connectionState ==
             ConnectionState.waiting) {
           return const Scaffold(
             body: Center(
-              child: CircularProgressIndicator(),
+              child:
+                  CircularProgressIndicator(),
             ),
           );
         }

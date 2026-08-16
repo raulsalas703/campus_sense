@@ -1,19 +1,152 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../services/location_service.dart';
 import '../../services/marker_service.dart';
 import '../map/location_map_screen.dart';
 
-class MyPlacesScreen extends StatelessWidget {
+class MyPlacesScreen extends StatefulWidget {
   const MyPlacesScreen({super.key});
+
+  @override
+  State<MyPlacesScreen> createState() =>
+      _MyPlacesScreenState();
+}
+
+class _MyPlacesScreenState
+    extends State<MyPlacesScreen> {
+  StreamSubscription<Position>?
+      _positionSubscription;
+
+  Position? _posicionActual;
+
+  bool _cargandoUbicacion = true;
+
+  String? _errorUbicacion;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _iniciarUbicacion();
+  }
+
+  // =========================
+  // UBICACIÓN
+  // =========================
+
+  Future<void> _iniciarUbicacion() async {
+    try {
+      final posicion =
+          await LocationService
+              .obtenerUbicacionActual();
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _posicionActual = posicion;
+        _cargandoUbicacion = false;
+        _errorUbicacion = null;
+      });
+
+      _positionSubscription =
+          LocationService
+              .escucharUbicacion()
+              .listen(
+        (nuevaPosicion) {
+          if (!mounted) {
+            return;
+          }
+
+          setState(() {
+            _posicionActual =
+                nuevaPosicion;
+
+            _errorUbicacion = null;
+          });
+        },
+        onError: (error) {
+          if (!mounted) {
+            return;
+          }
+
+          setState(() {
+            _errorUbicacion =
+                error.toString();
+          });
+        },
+      );
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _cargandoUbicacion = false;
+        _errorUbicacion = e.toString();
+      });
+    }
+  }
+
+  Future<void> _actualizarUbicacion()
+      async {
+    try {
+      setState(() {
+        _cargandoUbicacion = true;
+      });
+
+      final posicion =
+          await LocationService
+              .obtenerUbicacionActual();
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _posicionActual = posicion;
+        _cargandoUbicacion = false;
+        _errorUbicacion = null;
+      });
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _cargandoUbicacion = false;
+        _errorUbicacion = e.toString();
+      });
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        SnackBar(
+          content: Text(
+            'No se pudo actualizar la ubicación: $e',
+          ),
+        ),
+      );
+    }
+  }
+
+  // =========================
+  // DATOS DEL MARCADOR
+  // =========================
 
   String _nombreLugar(
     Map<String, dynamic> datos,
   ) {
     final nombre =
-        datos['nombre']?.toString().trim() ?? '';
+        datos['nombre']
+                ?.toString()
+                .trim() ??
+            '';
 
     if (nombre.isEmpty) {
       return 'Lugar guardado';
@@ -31,22 +164,73 @@ class MyPlacesScreen extends StatelessWidget {
         '';
   }
 
+  // =========================
+  // DISTANCIA
+  // =========================
+
+  double? _calcularDistancia({
+    required double? latitud,
+    required double? longitud,
+  }) {
+    final posicion =
+        _posicionActual;
+
+    if (posicion == null ||
+        latitud == null ||
+        longitud == null) {
+      return null;
+    }
+
+    return Geolocator.distanceBetween(
+      posicion.latitude,
+      posicion.longitude,
+      latitud,
+      longitud,
+    );
+  }
+
+  String _formatearDistancia(
+    double distancia,
+  ) {
+    if (distancia < 1000) {
+      return 'A ${distancia.round()} m de ti';
+    }
+
+    final kilometros =
+        distancia / 1000;
+
+    if (kilometros < 10) {
+      return 'A ${kilometros.toStringAsFixed(1)} km de ti';
+    }
+
+    return 'A ${kilometros.round()} km de ti';
+  }
+
+  // =========================
+  // ABRIR LUGAR EN MAPA
+  // =========================
+
   Future<void> _abrirLugar({
     required BuildContext context,
     required QueryDocumentSnapshot<
             Map<String, dynamic>>
         documento,
   }) async {
-    final datos = documento.data();
+    final datos =
+        documento.data();
 
     final latitud =
-        (datos['latitud'] as num?)?.toDouble();
+        (datos['latitud'] as num?)
+            ?.toDouble();
 
     final longitud =
-        (datos['longitud'] as num?)?.toDouble();
+        (datos['longitud'] as num?)
+            ?.toDouble();
 
-    if (latitud == null || longitud == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+    if (latitud == null ||
+        longitud == null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
         const SnackBar(
           content: Text(
             'Este lugar no tiene coordenadas válidas.',
@@ -61,7 +245,8 @@ class MyPlacesScreen extends StatelessWidget {
         _nombreLugar(datos);
 
     try {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
         SnackBar(
           content: Text(
             'Abriendo $nombre...',
@@ -69,9 +254,18 @@ class MyPlacesScreen extends StatelessWidget {
         ),
       );
 
-      final posicionActual =
-          await LocationService
-              .obtenerUbicacionActual();
+      Position posicionActual;
+
+      // Si ya tenemos una ubicación
+      // reciente, la reutilizamos.
+      if (_posicionActual != null) {
+        posicionActual =
+            _posicionActual!;
+      } else {
+        posicionActual =
+            await LocationService
+                .obtenerUbicacionActual();
+      }
 
       if (!context.mounted) {
         return;
@@ -82,14 +276,19 @@ class MyPlacesScreen extends StatelessWidget {
 
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => LocationMapScreen(
-            initialPosition: posicionActual,
-            targetMarkerId: documento.id,
-            targetPosition: LatLng(
+          builder: (_) =>
+              LocationMapScreen(
+            initialPosition:
+                posicionActual,
+            targetMarkerId:
+                documento.id,
+            targetPosition:
+                LatLng(
               latitud,
               longitud,
             ),
-            targetName: nombre,
+            targetName:
+                nombre,
           ),
         ),
       );
@@ -101,7 +300,8 @@ class MyPlacesScreen extends StatelessWidget {
       ScaffoldMessenger.of(context)
           .hideCurrentSnackBar();
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
         SnackBar(
           content: Text(
             'No se pudo abrir el lugar: $e',
@@ -111,8 +311,26 @@ class MyPlacesScreen extends StatelessWidget {
     }
   }
 
+  // =========================
+  // DISPOSE
+  // =========================
+
   @override
-  Widget build(BuildContext context) {
+  void dispose() {
+    _positionSubscription
+        ?.cancel();
+
+    super.dispose();
+  }
+
+  // =========================
+  // UI
+  // =========================
+
+  @override
+  Widget build(
+    BuildContext context,
+  ) {
     final colorScheme =
         Theme.of(context).colorScheme;
 
@@ -121,54 +339,99 @@ class MyPlacesScreen extends StatelessWidget {
         title: const Text(
           'Mis lugares',
           style: TextStyle(
-            fontWeight: FontWeight.bold,
+            fontWeight:
+                FontWeight.bold,
           ),
         ),
+        actions: [
+          IconButton(
+            tooltip:
+                'Actualizar ubicación',
+            onPressed:
+                _cargandoUbicacion
+                    ? null
+                    : _actualizarUbicacion,
+            icon:
+                _cargandoUbicacion
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child:
+                            CircularProgressIndicator(
+                          strokeWidth:
+                              2,
+                        ),
+                      )
+                    : const Icon(
+                        Icons
+                            .my_location,
+                      ),
+          ),
+
+          const SizedBox(
+            width: 8,
+          ),
+        ],
       ),
       body: StreamBuilder<
-          QuerySnapshot<Map<String, dynamic>>>(
+          QuerySnapshot<
+              Map<String, dynamic>>>(
         stream:
-            MarkerService.escucharMarcadores(),
+            MarkerService
+                .escucharMarcadores(),
         builder: (
           context,
           snapshot,
         ) {
-          if (snapshot.connectionState ==
+          if (snapshot
+                  .connectionState ==
               ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(),
+              child:
+                  CircularProgressIndicator(),
             );
           }
 
           if (snapshot.hasError) {
             return Center(
               child: Padding(
-                padding: const EdgeInsets.all(24),
+                padding:
+                    const EdgeInsets.all(
+                  24,
+                ),
                 child: Column(
                   mainAxisAlignment:
-                      MainAxisAlignment.center,
+                      MainAxisAlignment
+                          .center,
                   children: [
                     const Icon(
                       Icons.error_outline,
                       size: 55,
                     ),
+
                     const SizedBox(
                       height: 16,
                     ),
+
                     const Text(
                       'No se pudieron cargar tus lugares.',
-                      textAlign: TextAlign.center,
+                      textAlign:
+                          TextAlign.center,
                       style: TextStyle(
                         fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                        fontWeight:
+                            FontWeight.bold,
                       ),
                     ),
+
                     const SizedBox(
                       height: 8,
                     ),
+
                     Text(
                       '${snapshot.error}',
-                      textAlign: TextAlign.center,
+                      textAlign:
+                          TextAlign.center,
                     ),
                   ],
                 ),
@@ -177,20 +440,27 @@ class MyPlacesScreen extends StatelessWidget {
           }
 
           final lugares =
-              snapshot.data?.docs ?? [];
+              snapshot.data?.docs ??
+                  [];
 
           if (lugares.isEmpty) {
             return Center(
               child: Padding(
-                padding: const EdgeInsets.all(30),
+                padding:
+                    const EdgeInsets.all(
+                  30,
+                ),
                 child: Column(
                   mainAxisAlignment:
-                      MainAxisAlignment.center,
+                      MainAxisAlignment
+                          .center,
                   children: [
                     Icon(
-                      Icons.bookmark_border,
+                      Icons
+                          .bookmark_border,
                       size: 80,
-                      color: colorScheme.primary,
+                      color:
+                          colorScheme.primary,
                     ),
 
                     const SizedBox(
@@ -199,10 +469,12 @@ class MyPlacesScreen extends StatelessWidget {
 
                     const Text(
                       'Aún no tienes lugares guardados',
-                      textAlign: TextAlign.center,
+                      textAlign:
+                          TextAlign.center,
                       style: TextStyle(
                         fontSize: 21,
-                        fontWeight: FontWeight.bold,
+                        fontWeight:
+                            FontWeight.bold,
                       ),
                     ),
 
@@ -212,11 +484,12 @@ class MyPlacesScreen extends StatelessWidget {
 
                     Text(
                       'Abre Mi mapa y mantén presionado un punto para guardar tu primer lugar.',
-                      textAlign: TextAlign.center,
+                      textAlign:
+                          TextAlign.center,
                       style: TextStyle(
                         fontSize: 15,
-                        color:
-                            colorScheme.onSurfaceVariant,
+                        color: colorScheme
+                            .onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -232,106 +505,253 @@ class MyPlacesScreen extends StatelessWidget {
                     const BoxConstraints(
                   maxWidth: 850,
                 ),
-                child: ListView.builder(
+                child:
+                    ListView.builder(
                   padding:
-                      const EdgeInsets.all(20),
+                      const EdgeInsets.all(
+                    20,
+                  ),
                   itemCount:
-                      lugares.length + 1,
+                      lugares.length +
+                          1,
                   itemBuilder: (
                     context,
                     index,
                   ) {
+                    // =================
+                    // CABECERA
+                    // =================
+
                     if (index == 0) {
-                      return Container(
-                        margin:
-                            const EdgeInsets.only(
-                          bottom: 20,
-                        ),
-                        padding:
-                            const EdgeInsets.all(
-                          20,
-                        ),
-                        decoration:
-                            BoxDecoration(
-                          color: colorScheme
-                              .primaryContainer,
-                          borderRadius:
-                              BorderRadius.circular(
-                            18,
+                      return Column(
+                        children: [
+                          Container(
+                            margin:
+                                const EdgeInsets
+                                    .only(
+                              bottom:
+                                  12,
+                            ),
+                            padding:
+                                const EdgeInsets
+                                    .all(
+                              20,
+                            ),
+                            decoration:
+                                BoxDecoration(
+                              color:
+                                  colorScheme
+                                      .primaryContainer,
+                              borderRadius:
+                                  BorderRadius
+                                      .circular(
+                                18,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width:
+                                      54,
+                                  height:
+                                      54,
+                                  decoration:
+                                      BoxDecoration(
+                                    color:
+                                        colorScheme
+                                            .primary,
+                                    borderRadius:
+                                        BorderRadius
+                                            .circular(
+                                      15,
+                                    ),
+                                  ),
+                                  child:
+                                      Icon(
+                                    Icons
+                                        .bookmark_outlined,
+                                    color:
+                                        colorScheme
+                                            .onPrimary,
+                                    size:
+                                        30,
+                                  ),
+                                ),
+
+                                const SizedBox(
+                                  width:
+                                      16,
+                                ),
+
+                                Expanded(
+                                  child:
+                                      Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment
+                                            .start,
+                                    children: [
+                                      const Text(
+                                        'Lugares guardados',
+                                        style:
+                                            TextStyle(
+                                          fontSize:
+                                              18,
+                                          fontWeight:
+                                              FontWeight.bold,
+                                        ),
+                                      ),
+
+                                      const SizedBox(
+                                        height:
+                                            4,
+                                      ),
+
+                                      Text(
+                                        '${lugares.length} ${lugares.length == 1 ? 'lugar' : 'lugares'}',
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        child: Row(
-                          children: [
+
+                          // Estado del GPS.
+                          if (_cargandoUbicacion)
                             Container(
-                              width: 54,
-                              height: 54,
+                              width:
+                                  double.infinity,
+                              margin:
+                                  const EdgeInsets
+                                      .only(
+                                bottom:
+                                    16,
+                              ),
+                              padding:
+                                  const EdgeInsets
+                                      .all(
+                                12,
+                              ),
                               decoration:
                                   BoxDecoration(
-                                color: colorScheme
-                                    .primary,
+                                color:
+                                    colorScheme
+                                        .surfaceContainerHighest,
                                 borderRadius:
                                     BorderRadius
                                         .circular(
-                                  15,
+                                  12,
                                 ),
                               ),
-                              child: Icon(
-                                Icons
-                                    .bookmark_outlined,
-                                color: colorScheme
-                                    .onPrimary,
-                                size: 30,
-                              ),
-                            ),
-
-                            const SizedBox(
-                              width: 16,
-                            ),
-
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment
-                                        .start,
+                              child:
+                                  const Row(
                                 children: [
-                                  const Text(
-                                    'Lugares guardados',
-                                    style:
-                                        TextStyle(
-                                      fontSize:
-                                          18,
-                                      fontWeight:
-                                          FontWeight
-                                              .bold,
+                                  SizedBox(
+                                    width:
+                                        18,
+                                    height:
+                                        18,
+                                    child:
+                                        CircularProgressIndicator(
+                                      strokeWidth:
+                                          2,
                                     ),
                                   ),
 
-                                  const SizedBox(
-                                    height: 4,
+                                  SizedBox(
+                                    width:
+                                        10,
                                   ),
 
-                                  Text(
-                                    '${lugares.length} ${lugares.length == 1 ? 'lugar' : 'lugares'}',
+                                  Expanded(
+                                    child:
+                                        Text(
+                                      'Calculando tu ubicación...',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else if (_errorUbicacion !=
+                              null)
+                            Container(
+                              width:
+                                  double.infinity,
+                              margin:
+                                  const EdgeInsets
+                                      .only(
+                                bottom:
+                                    16,
+                              ),
+                              padding:
+                                  const EdgeInsets
+                                      .all(
+                                12,
+                              ),
+                              decoration:
+                                  BoxDecoration(
+                                color:
+                                    colorScheme
+                                        .errorContainer,
+                                borderRadius:
+                                    BorderRadius
+                                        .circular(
+                                  12,
+                                ),
+                              ),
+                              child:
+                                  Row(
+                                children: [
+                                  Icon(
+                                    Icons
+                                        .location_off_outlined,
+                                    color:
+                                        colorScheme
+                                            .onErrorContainer,
+                                  ),
+
+                                  const SizedBox(
+                                    width:
+                                        10,
+                                  ),
+
+                                  const Expanded(
+                                    child:
+                                        Text(
+                                      'No se pudo calcular la distancia. Puedes actualizar tu ubicación.',
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
-                          ],
-                        ),
+
+                          const SizedBox(
+                            height: 4,
+                          ),
+                        ],
                       );
                     }
 
+                    // =================
+                    // LUGAR
+                    // =================
+
                     final documento =
-                        lugares[index - 1];
+                        lugares[
+                            index - 1];
 
                     final datos =
                         documento.data();
 
                     final nombre =
-                        _nombreLugar(datos);
+                        _nombreLugar(
+                      datos,
+                    );
 
                     final descripcion =
-                        _descripcionLugar(datos);
+                        _descripcionLugar(
+                      datos,
+                    );
 
                     final latitud =
                         (datos['latitud']
@@ -343,39 +763,54 @@ class MyPlacesScreen extends StatelessWidget {
                                     as num?)
                                 ?.toDouble();
 
+                    final distancia =
+                        _calcularDistancia(
+                      latitud:
+                          latitud,
+                      longitud:
+                          longitud,
+                    );
+
                     return Card(
                       margin:
-                          const EdgeInsets.only(
+                          const EdgeInsets
+                              .only(
                         bottom: 14,
                       ),
                       child: InkWell(
                         borderRadius:
-                            BorderRadius.circular(
+                            BorderRadius
+                                .circular(
                           12,
                         ),
                         onTap: () {
                           _abrirLugar(
-                            context: context,
+                            context:
+                                context,
                             documento:
                                 documento,
                           );
                         },
                         child: Padding(
                           padding:
-                              const EdgeInsets.all(
+                              const EdgeInsets
+                                  .all(
                             18,
                           ),
                           child: Row(
                             children: [
                               Container(
                                 width: 52,
-                                height: 52,
+                                height:
+                                    52,
                                 decoration:
                                     BoxDecoration(
-                                  color: colorScheme
-                                      .primary
-                                      .withValues(
-                                    alpha: 0.12,
+                                  color:
+                                      colorScheme
+                                          .primary
+                                          .withValues(
+                                    alpha:
+                                        0.12,
                                   ),
                                   borderRadius:
                                       BorderRadius
@@ -383,8 +818,10 @@ class MyPlacesScreen extends StatelessWidget {
                                     14,
                                   ),
                                 ),
-                                child: Icon(
-                                  Icons.place,
+                                child:
+                                    Icon(
+                                  Icons
+                                      .place,
                                   color:
                                       colorScheme
                                           .primary,
@@ -397,7 +834,8 @@ class MyPlacesScreen extends StatelessWidget {
                               ),
 
                               Expanded(
-                                child: Column(
+                                child:
+                                    Column(
                                   crossAxisAlignment:
                                       CrossAxisAlignment
                                           .start,
@@ -409,8 +847,7 @@ class MyPlacesScreen extends StatelessWidget {
                                         fontSize:
                                             17,
                                         fontWeight:
-                                            FontWeight
-                                                .bold,
+                                            FontWeight.bold,
                                       ),
                                     ),
 
@@ -420,19 +857,72 @@ class MyPlacesScreen extends StatelessWidget {
                                         height:
                                             5,
                                       ),
+
                                       Text(
                                         descripcion,
-                                        maxLines: 2,
+                                        maxLines:
+                                            2,
                                         overflow:
-                                            TextOverflow
-                                                .ellipsis,
+                                            TextOverflow.ellipsis,
                                         style:
                                             TextStyle(
-                                          color: colorScheme
-                                              .onSurfaceVariant,
+                                          color:
+                                              colorScheme.onSurfaceVariant,
                                         ),
                                       ),
                                     ],
+
+                                    const SizedBox(
+                                      height:
+                                          8,
+                                    ),
+
+                                    // DISTANCIA
+                                    if (distancia !=
+                                        null)
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons
+                                                .near_me_outlined,
+                                            size:
+                                                16,
+                                            color:
+                                                colorScheme.primary,
+                                          ),
+
+                                          const SizedBox(
+                                            width:
+                                                5,
+                                          ),
+
+                                          Text(
+                                            _formatearDistancia(
+                                              distancia,
+                                            ),
+                                            style:
+                                                TextStyle(
+                                              fontSize:
+                                                  13,
+                                              fontWeight:
+                                                  FontWeight.w600,
+                                              color:
+                                                  colorScheme.primary,
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                    else if (_cargandoUbicacion)
+                                      Text(
+                                        'Calculando distancia...',
+                                        style:
+                                            TextStyle(
+                                          fontSize:
+                                              13,
+                                          color:
+                                              colorScheme.onSurfaceVariant,
+                                        ),
+                                      ),
 
                                     if (latitud !=
                                             null &&
@@ -440,16 +930,17 @@ class MyPlacesScreen extends StatelessWidget {
                                             null) ...[
                                       const SizedBox(
                                         height:
-                                            8,
+                                            7,
                                       ),
+
                                       Text(
                                         '${latitud.toStringAsFixed(5)}, ${longitud.toStringAsFixed(5)}',
                                         style:
                                             TextStyle(
                                           fontSize:
-                                              12,
-                                          color: colorScheme
-                                              .onSurfaceVariant,
+                                              11,
+                                          color:
+                                              colorScheme.onSurfaceVariant,
                                         ),
                                       ),
                                     ],
