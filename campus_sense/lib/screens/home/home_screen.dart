@@ -2,6 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../services/location_service.dart';
+import '../camera/location_camera_screen.dart';
+import '../map/location_map_screen.dart';
+
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -74,10 +78,7 @@ class HomeScreen extends StatelessWidget {
         icon: Icon(icon),
         label: Text(label),
         style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(
-            vertical: 16,
-            horizontal: 12,
-          ),
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
         ),
       ),
     );
@@ -105,11 +106,7 @@ class HomeScreen extends StatelessWidget {
                   color: Colors.blue.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(
-                  icon,
-                  size: 28,
-                  color: Colors.blue,
-                ),
+                child: Icon(icon, size: 28, color: Colors.blue),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -134,14 +131,69 @@ class HomeScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
-                Icons.chevron_right,
-              ),
+              const Icon(Icons.chevron_right),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _abrirMiUbicacion(BuildContext context) async {
+    try {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Obteniendo ubicación...')));
+
+      final posicion = await LocationService.guardarUbicacionActual();
+
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => LocationMapScreen(initialPosition: posicion),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo obtener la ubicación: $e')),
+      );
+    }
+  }
+
+  Future<void> _abrirMapa(BuildContext context) async {
+    try {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Cargando mapa...')));
+
+      final posicion = await LocationService.obtenerUbicacionActual();
+
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => LocationMapScreen(initialPosition: posicion),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('No se pudo abrir el mapa: $e')));
+    }
   }
 
   @override
@@ -150,9 +202,7 @@ class HomeScreen extends StatelessWidget {
 
     if (user == null) {
       return const Scaffold(
-        body: Center(
-          child: Text('No hay una sesión activa.'),
-        ),
+        body: Center(child: Text('No hay una sesión activa.')),
       );
     }
 
@@ -164,28 +214,23 @@ class HomeScreen extends StatelessWidget {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
 
         final datos = snapshot.data?.data();
 
-        final nombreFirestore =
-            datos?['nombre']?.toString().trim() ?? '';
+        final nombreFirestore = datos?['nombre']?.toString().trim() ?? '';
 
-        final correoFirestore =
-            datos?['correo']?.toString().trim() ?? '';
+        final correoFirestore = datos?['correo']?.toString().trim() ?? '';
 
-        final rolFirestore =
-            datos?['rol']?.toString().trim() ?? 'student';
+        final rolFirestore = datos?['rol']?.toString().trim() ?? 'student';
 
         final nombreMostrar = nombreFirestore.isNotEmpty
             ? nombreFirestore
             : (user.displayName?.trim().isNotEmpty == true
-                ? user.displayName!.trim()
-                : 'Estudiante');
+                  ? user.displayName!.trim()
+                  : 'Estudiante');
 
         final correoMostrar = correoFirestore.isNotEmpty
             ? correoFirestore
@@ -197,16 +242,12 @@ class HomeScreen extends StatelessWidget {
           appBar: AppBar(
             title: const Text(
               'Campus Sense',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
             actions: [
               PopupMenuButton<String>(
                 tooltip: 'Cuenta',
-                icon: const Icon(
-                  Icons.account_circle_outlined,
-                ),
+                icon: const Icon(Icons.account_circle_outlined),
                 onSelected: (value) async {
                   if (value == 'logout') {
                     await _confirmarSalir(context);
@@ -221,30 +262,21 @@ class HomeScreen extends StatelessWidget {
                         children: [
                           Text(
                             nombreMostrar,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             correoMostrar,
-                            style: const TextStyle(
-                              fontSize: 13,
-                            ),
+                            style: const TextStyle(fontSize: 13),
                           ),
                           const SizedBox(height: 6),
                           Row(
                             children: [
-                              Icon(
-                                _iconoRol(rolFirestore),
-                                size: 17,
-                              ),
+                              Icon(_iconoRol(rolFirestore), size: 17),
                               const SizedBox(width: 6),
                               Text(
                                 rolMostrar,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                ),
+                                style: const TextStyle(fontSize: 13),
                               ),
                             ],
                           ),
@@ -268,12 +300,11 @@ class HomeScreen extends StatelessWidget {
               const SizedBox(width: 8),
             ],
           ),
+
           body: SafeArea(
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  maxWidth: 900,
-                ),
+                constraints: const BoxConstraints(maxWidth: 900),
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(24),
                   child: Column(
@@ -286,7 +317,9 @@ class HomeScreen extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
+
                       const SizedBox(height: 8),
+
                       Text(
                         'Bienvenido a Campus Sense',
                         style: TextStyle(
@@ -333,7 +366,9 @@ class HomeScreen extends StatelessWidget {
                               );
                             },
                           ),
+
                           const SizedBox(width: 12),
+
                           _topButton(
                             icon: Icons.person_outline,
                             label: 'Perfil',
@@ -353,7 +388,7 @@ class HomeScreen extends StatelessWidget {
                       const SizedBox(height: 30),
 
                       const Text(
-                        '¿Qué quieres consultar?',
+                        '¿Qué quieres hacer?',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -362,65 +397,36 @@ class HomeScreen extends StatelessWidget {
 
                       const SizedBox(height: 16),
 
+                      // MI UBICACIÓN
                       _mainButton(
-                        icon: Icons.school_outlined,
-                        title: 'Estado del campus',
-                        subtitle:
-                            'Consulta información general y disponibilidad.',
+                        icon: Icons.my_location_outlined,
+                        title: 'Mi ubicación',
+                        subtitle: 'Ver y guardar dónde estoy actualmente.',
                         onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Estado del campus próximamente',
-                              ),
-                            ),
-                          );
+                          _abrirMiUbicacion(context);
+                        },
+                      ),
+
+                      // MAPA
+                      _mainButton(
+                        icon: Icons.map_outlined,
+                        title: 'Mapa del campus',
+                        subtitle: 'Explorar el mapa y ver mi posición.',
+                        onTap: () {
+                          _abrirMapa(context);
                         },
                       ),
 
                       _mainButton(
-                        icon: Icons.groups_outlined,
-                        title: 'Afluencia',
+                        icon: Icons.camera_alt_outlined,
+                        title: 'Cámara con ubicación',
                         subtitle:
-                            'Consulta qué tan concurridas están las áreas.',
+                            'Usar la cámara y ver mi ubicación en tiempo real.',
                         onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Afluencia próximamente',
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-
-                      _mainButton(
-                        icon: Icons.place_outlined,
-                        title: 'Espacios',
-                        subtitle:
-                            'Consulta aulas, laboratorios y áreas disponibles.',
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Espacios próximamente',
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-
-                      _mainButton(
-                        icon: Icons.analytics_outlined,
-                        title: 'Estadísticas',
-                        subtitle:
-                            'Visualiza información y tendencias del campus.',
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Estadísticas próximamente',
-                              ),
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const LocationCameraScreen(),
                             ),
                           );
                         },
