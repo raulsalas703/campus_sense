@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -31,6 +32,34 @@ class HomeScreen extends StatelessWidget {
 
     if (salir == true) {
       await FirebaseAuth.instance.signOut();
+    }
+  }
+
+  String _nombreRol(String rol) {
+    switch (rol) {
+      case 'admin':
+        return 'Administrador';
+
+      case 'teacher':
+        return 'Docente';
+
+      case 'student':
+      default:
+        return 'Estudiante';
+    }
+  }
+
+  IconData _iconoRol(String rol) {
+    switch (rol) {
+      case 'admin':
+        return Icons.admin_panel_settings_outlined;
+
+      case 'teacher':
+        return Icons.school_outlined;
+
+      case 'student':
+      default:
+        return Icons.person_outline;
     }
   }
 
@@ -119,223 +148,303 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
 
-    final nombre = user?.displayName?.trim();
-
-    final nombreMostrar =
-        nombre != null && nombre.isNotEmpty ? nombre : 'Estudiante';
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Campus Sense',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+    if (user == null) {
+      return const Scaffold(
+        body: Center(
+          child: Text('No hay una sesión activa.'),
         ),
-        actions: [
-          PopupMenuButton<String>(
-            tooltip: 'Cuenta',
-            icon: const Icon(
-              Icons.account_circle_outlined,
+      );
+    }
+
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
             ),
-            onSelected: (value) async {
-              if (value == 'logout') {
-                await _confirmarSalir(context);
-              }
-            },
-            itemBuilder: (context) {
-              return [
-                PopupMenuItem<String>(
-                  enabled: false,
+          );
+        }
+
+        final datos = snapshot.data?.data();
+
+        final nombreFirestore =
+            datos?['nombre']?.toString().trim() ?? '';
+
+        final correoFirestore =
+            datos?['correo']?.toString().trim() ?? '';
+
+        final rolFirestore =
+            datos?['rol']?.toString().trim() ?? 'student';
+
+        final nombreMostrar = nombreFirestore.isNotEmpty
+            ? nombreFirestore
+            : (user.displayName?.trim().isNotEmpty == true
+                ? user.displayName!.trim()
+                : 'Estudiante');
+
+        final correoMostrar = correoFirestore.isNotEmpty
+            ? correoFirestore
+            : (user.email ?? 'Sin correo');
+
+        final rolMostrar = _nombreRol(rolFirestore);
+
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text(
+              'Campus Sense',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            actions: [
+              PopupMenuButton<String>(
+                tooltip: 'Cuenta',
+                icon: const Icon(
+                  Icons.account_circle_outlined,
+                ),
+                onSelected: (value) async {
+                  if (value == 'logout') {
+                    await _confirmarSalir(context);
+                  }
+                },
+                itemBuilder: (context) {
+                  return [
+                    PopupMenuItem<String>(
+                      enabled: false,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            nombreMostrar,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            correoMostrar,
+                            style: const TextStyle(
+                              fontSize: 13,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Icon(
+                                _iconoRol(rolFirestore),
+                                size: 17,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                rolMostrar,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuDivider(),
+                    const PopupMenuItem<String>(
+                      value: 'logout',
+                      child: Row(
+                        children: [
+                          Icon(Icons.logout),
+                          SizedBox(width: 10),
+                          Text('Cerrar sesión'),
+                        ],
+                      ),
+                    ),
+                  ];
+                },
+              ),
+              const SizedBox(width: 8),
+            ],
+          ),
+          body: SafeArea(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: 900,
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Cuenta',
-                        style: TextStyle(
+                      Text(
+                        'Hola, $nombreMostrar 👋',
+                        style: const TextStyle(
+                          fontSize: 28,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 8),
                       Text(
-                        user?.email ?? 'Sin correo',
-                        style: const TextStyle(
-                          fontSize: 13,
+                        'Bienvenido a Campus Sense',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey.shade600,
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                const PopupMenuDivider(),
-                const PopupMenuItem<String>(
-                  value: 'logout',
-                  child: Row(
-                    children: [
-                      Icon(Icons.logout),
-                      SizedBox(width: 10),
-                      Text('Cerrar sesión'),
-                    ],
-                  ),
-                ),
-              ];
-            },
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: 900,
-            ),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Hola, $nombreMostrar 👋',
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Bienvenido a Campus Sense',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
 
-                  Row(
-                    children: [
-                      _topButton(
-                        icon: Icons.notifications_outlined,
-                        label: 'Avisos',
-                        onPressed: () {
+                      const SizedBox(height: 10),
+
+                      Row(
+                        children: [
+                          Icon(
+                            _iconoRol(rolFirestore),
+                            size: 18,
+                            color: Colors.grey.shade700,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            rolMostrar,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      Row(
+                        children: [
+                          _topButton(
+                            icon: Icons.notifications_outlined,
+                            label: 'Avisos',
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Sección de avisos próximamente',
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          const SizedBox(width: 12),
+                          _topButton(
+                            icon: Icons.person_outline,
+                            label: 'Perfil',
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    '$nombreMostrar - $correoMostrar',
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 30),
+
+                      const Text(
+                        '¿Qué quieres consultar?',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      _mainButton(
+                        icon: Icons.school_outlined,
+                        title: 'Estado del campus',
+                        subtitle:
+                            'Consulta información general y disponibilidad.',
+                        onTap: () {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text(
-                                'Sección de avisos próximamente',
+                                'Estado del campus próximamente',
                               ),
                             ),
                           );
                         },
                       ),
-                      const SizedBox(width: 12),
-                      _topButton(
-                        icon: Icons.person_outline,
-                        label: 'Perfil',
-                        onPressed: () {
+
+                      _mainButton(
+                        icon: Icons.groups_outlined,
+                        title: 'Afluencia',
+                        subtitle:
+                            'Consulta qué tan concurridas están las áreas.',
+                        onTap: () {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text(
-                                'Sección de perfil próximamente',
+                                'Afluencia próximamente',
                               ),
                             ),
                           );
                         },
                       ),
+
+                      _mainButton(
+                        icon: Icons.place_outlined,
+                        title: 'Espacios',
+                        subtitle:
+                            'Consulta aulas, laboratorios y áreas disponibles.',
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Espacios próximamente',
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+
+                      _mainButton(
+                        icon: Icons.analytics_outlined,
+                        title: 'Estadísticas',
+                        subtitle:
+                            'Visualiza información y tendencias del campus.',
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Estadísticas próximamente',
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      Center(
+                        child: TextButton.icon(
+                          onPressed: () {
+                            _confirmarSalir(context);
+                          },
+                          icon: const Icon(Icons.logout),
+                          label: const Text('Cerrar sesión'),
+                        ),
+                      ),
                     ],
                   ),
-
-                  const SizedBox(height: 30),
-
-                  const Text(
-                    '¿Qué quieres consultar?',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  _mainButton(
-                    icon: Icons.school_outlined,
-                    title: 'Estado del campus',
-                    subtitle:
-                        'Consulta información general y disponibilidad.',
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Estado del campus próximamente',
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-
-                  _mainButton(
-                    icon: Icons.groups_outlined,
-                    title: 'Afluencia',
-                    subtitle:
-                        'Consulta qué tan concurridas están las áreas.',
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Afluencia próximamente',
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-
-                  _mainButton(
-                    icon: Icons.place_outlined,
-                    title: 'Espacios',
-                    subtitle:
-                        'Consulta aulas, laboratorios y áreas disponibles.',
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Espacios próximamente',
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-
-                  _mainButton(
-                    icon: Icons.analytics_outlined,
-                    title: 'Estadísticas',
-                    subtitle:
-                        'Visualiza información y tendencias del campus.',
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Estadísticas próximamente',
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  Center(
-                    child: TextButton.icon(
-                      onPressed: () {
-                        _confirmarSalir(context);
-                      },
-                      icon: const Icon(Icons.logout),
-                      label: const Text('Cerrar sesión'),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
