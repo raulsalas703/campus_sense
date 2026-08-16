@@ -1,331 +1,88 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
+  Future<void> _confirmarSalir(BuildContext context) async {
+    final salir = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Cerrar sesión'),
+          content: const Text('¿Seguro que quieres salir?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, false);
+              },
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(context, true);
+              },
+              child: const Text('Salir'),
+            ),
+          ],
+        );
+      },
+    );
 
-    if (hour >= 6 && hour < 12) {
-      return 'Buenos días';
+    if (salir == true) {
+      await FirebaseAuth.instance.signOut();
     }
-
-    if (hour >= 12 && hour < 19) {
-      return 'Buenas tardes';
-    }
-
-    return 'Buenas noches';
   }
 
-  IconData _getGreetingIcon() {
-    final hour = DateTime.now().hour;
-
-    if (hour >= 6 && hour < 19) {
-      return Icons.wb_sunny_rounded;
-    }
-
-    return Icons.nightlight_round;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.primary.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Icon(
-                      Icons.sensors_rounded,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 30,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'CampusSense',
-                          style: TextStyle(
-                            fontSize: 23,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          'Tu campus se adapta a ti',
-                          style: TextStyle(fontSize: 14),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    isDark
-                        ? Icons.dark_mode_rounded
-                        : Icons.light_mode_rounded,
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 32),
-
-              Row(
-                children: [
-                  Icon(
-                    _getGreetingIcon(),
-                    size: 30,
-                    color: isDark ? Colors.amber : Colors.orange,
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    _getGreeting(),
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 6),
-
-              Text(
-                'Aquí podrás consultar tu contexto y actividades.',
-                style: TextStyle(
-                  fontSize: 15,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.65),
-                ),
-              ),
-
-              const SizedBox(height: 28),
-
-              const Text(
-                'Contexto actual',
-                style: TextStyle(
-                  fontSize: 19,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-
-              const SizedBox(height: 14),
-
-              GridView.count(
-                crossAxisCount: 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 1.35,
-                children: [
-                  _ContextCard(
-                    icon: Icons.location_on_rounded,
-                    title: 'Ubicación',
-                    value: 'Sin detectar',
-                    iconColor: Colors.red,
-                  ),
-                  _ContextCard(
-                    icon: Icons.access_time_rounded,
-                    title: 'Hora',
-                    value: _currentTime(),
-                    iconColor: Colors.blue,
-                  ),
-                  const _ContextCard(
-                    icon: Icons.light_mode_rounded,
-                    title: 'Iluminación',
-                    value: 'Pendiente',
-                    iconColor: Colors.amber,
-                  ),
-                  const _ContextCard(
-                    icon: Icons.directions_walk_rounded,
-                    title: 'Movimiento',
-                    value: 'Pendiente',
-                    iconColor: Colors.green,
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 30),
-
-              const Text(
-                '¿Qué necesitas?',
-                style: TextStyle(
-                  fontSize: 19,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-
-              const SizedBox(height: 14),
-
-              _MenuButton(
-                icon: Icons.place_rounded,
-                title: 'Lugares',
-                subtitle: 'Consulta lugares de tu campus',
-                onTap: () {},
-              ),
-
-              const SizedBox(height: 12),
-
-              _MenuButton(
-                icon: Icons.school_rounded,
-                title: 'Actividades',
-                subtitle: 'Consulta tus actividades académicas',
-                onTap: () {},
-              ),
-
-              const SizedBox(height: 12),
-
-              _MenuButton(
-                icon: Icons.sensors_rounded,
-                title: 'Contexto',
-                subtitle: 'Consulta los sensores del dispositivo',
-                onTap: () {},
-              ),
-
-              const SizedBox(height: 12),
-
-              _MenuButton(
-                icon: Icons.settings_rounded,
-                title: 'Configuración',
-                subtitle: 'Personaliza CampusSense',
-                onTap: () {},
-              ),
-            ],
+  Widget _topButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+  }) {
+    return Expanded(
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon),
+        label: Text(label),
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(
+            vertical: 16,
+            horizontal: 12,
           ),
         ),
       ),
     );
   }
 
-  static String _currentTime() {
-    final now = DateTime.now();
-
-    final hour = now.hour.toString().padLeft(2, '0');
-    final minute = now.minute.toString().padLeft(2, '0');
-
-    return '$hour:$minute';
-  }
-}
-
-class _ContextCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String value;
-  final Color iconColor;
-
-  const _ContextCard({
-    required this.icon,
-    required this.title,
-    required this.value,
-    required this.iconColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Theme.of(
-            context,
-          ).colorScheme.outline.withValues(alpha: 0.12),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Icon(
-            icon,
-            color: iconColor,
-            size: 28,
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.60),
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MenuButton extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  const _MenuButton({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Theme.of(context).colorScheme.surface,
-      borderRadius: BorderRadius.circular(20),
+  Widget _mainButton({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 14),
       child: InkWell(
+        borderRadius: BorderRadius.circular(12),
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(18),
           child: Row(
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: 52,
+                height: 52,
                 decoration: BoxDecoration(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.primary.withValues(alpha: 0.12),
+                  color: Colors.blue.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
                   icon,
-                  color: Theme.of(context).colorScheme.primary,
+                  size: 28,
+                  color: Colors.blue,
                 ),
               ),
-              const SizedBox(width: 15),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -333,25 +90,249 @@ class _MenuButton extends StatelessWidget {
                     Text(
                       title,
                       style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 4),
                     Text(
                       subtitle,
                       style: TextStyle(
-                        fontSize: 13,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.60),
+                        fontSize: 14,
+                        color: Colors.grey.shade600,
                       ),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded),
+              const Icon(
+                Icons.chevron_right,
+              ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
+    final nombre = user?.displayName?.trim();
+
+    final nombreMostrar =
+        nombre != null && nombre.isNotEmpty ? nombre : 'Estudiante';
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Campus Sense',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        actions: [
+          PopupMenuButton<String>(
+            tooltip: 'Cuenta',
+            icon: const Icon(
+              Icons.account_circle_outlined,
+            ),
+            onSelected: (value) async {
+              if (value == 'logout') {
+                await _confirmarSalir(context);
+              }
+            },
+            itemBuilder: (context) {
+              return [
+                PopupMenuItem<String>(
+                  enabled: false,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Cuenta',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        user?.email ?? 'Sin correo',
+                        style: const TextStyle(
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const PopupMenuDivider(),
+                const PopupMenuItem<String>(
+                  value: 'logout',
+                  child: Row(
+                    children: [
+                      Icon(Icons.logout),
+                      SizedBox(width: 10),
+                      Text('Cerrar sesión'),
+                    ],
+                  ),
+                ),
+              ];
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: 900,
+            ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Hola, $nombreMostrar 👋',
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Bienvenido a Campus Sense',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  Row(
+                    children: [
+                      _topButton(
+                        icon: Icons.notifications_outlined,
+                        label: 'Avisos',
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Sección de avisos próximamente',
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 12),
+                      _topButton(
+                        icon: Icons.person_outline,
+                        label: 'Perfil',
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Sección de perfil próximamente',
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  const Text(
+                    '¿Qué quieres consultar?',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  _mainButton(
+                    icon: Icons.school_outlined,
+                    title: 'Estado del campus',
+                    subtitle:
+                        'Consulta información general y disponibilidad.',
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Estado del campus próximamente',
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+
+                  _mainButton(
+                    icon: Icons.groups_outlined,
+                    title: 'Afluencia',
+                    subtitle:
+                        'Consulta qué tan concurridas están las áreas.',
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Afluencia próximamente',
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+
+                  _mainButton(
+                    icon: Icons.place_outlined,
+                    title: 'Espacios',
+                    subtitle:
+                        'Consulta aulas, laboratorios y áreas disponibles.',
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Espacios próximamente',
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+
+                  _mainButton(
+                    icon: Icons.analytics_outlined,
+                    title: 'Estadísticas',
+                    subtitle:
+                        'Visualiza información y tendencias del campus.',
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Estadísticas próximamente',
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  Center(
+                    child: TextButton.icon(
+                      onPressed: () {
+                        _confirmarSalir(context);
+                      },
+                      icon: const Icon(Icons.logout),
+                      label: const Text('Cerrar sesión'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),

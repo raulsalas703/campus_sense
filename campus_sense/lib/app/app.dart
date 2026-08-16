@@ -1,60 +1,50 @@
-import 'dart:async';
-
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../screens/auth/login_screen.dart';
 import '../screens/home/home_screen.dart';
-import 'theme.dart';
 
-class CampusSenseApp extends StatefulWidget {
+class CampusSenseApp extends StatelessWidget {
   const CampusSenseApp({super.key});
-
-  @override
-  State<CampusSenseApp> createState() => _CampusSenseAppState();
-}
-
-class _CampusSenseAppState extends State<CampusSenseApp> {
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _timer = Timer.periodic(
-      const Duration(minutes: 1),
-      (_) {
-        if (mounted) {
-          setState(() {});
-        }
-      },
-    );
-  }
-
-  bool get _isNight {
-    final hour = DateTime.now().hour;
-
-    return hour >= 19 || hour < 6;
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'CampusSense',
+      title: 'Campus Sense',
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF2563EB),
+        ),
+      ),
+      home: const AuthGate(),
+    );
+  }
+}
 
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
 
-      themeMode: _isNight
-          ? ThemeMode.dark
-          : ThemeMode.light,
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
 
-      home: const HomeScreen(),
+        if (snapshot.hasData) {
+          return const HomeScreen();
+        }
+
+        return const LoginScreen();
+      },
     );
   }
 }

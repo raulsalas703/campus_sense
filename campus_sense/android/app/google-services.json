@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "932517152303",
+    "project_id": "campus-sense-raulsalas",
+    "storage_bucket": "campus-sense-raulsalas.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:932517152303:android:bb7eed98e160209a9c28da",
+        "android_client_info": {
+          "package_name": "com.example.campus_sense"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAA0GxJFUD6Gxc0TF8fHk_nz8xrN4SbWHs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
