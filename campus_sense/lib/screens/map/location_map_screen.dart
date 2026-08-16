@@ -13,9 +13,18 @@ import 'create_marker_screen.dart';
 class LocationMapScreen extends StatefulWidget {
   final Position initialPosition;
 
+  // Si entramos desde "Mis lugares",
+  // estos datos indican qué marcador mostrar.
+  final String? targetMarkerId;
+  final LatLng? targetPosition;
+  final String? targetName;
+
   const LocationMapScreen({
     super.key,
     required this.initialPosition,
+    this.targetMarkerId,
+    this.targetPosition,
+    this.targetName,
   });
 
   @override
@@ -43,10 +52,27 @@ class _LocationMapScreenState
   void initState() {
     super.initState();
 
-    _position =
-        widget.initialPosition;
+    _position = widget.initialPosition;
 
     _iniciarSeguimiento();
+  }
+
+  // =========================
+  // UBICACIÓN ACTUAL
+  // =========================
+
+  LatLng get _ubicacion {
+    return LatLng(
+      _position.latitude,
+      _position.longitude,
+    );
+  }
+
+  // Si venimos de Mis lugares,
+  // el mapa abre centrado en ese lugar.
+  LatLng get _centroInicial {
+    return widget.targetPosition ??
+        _ubicacion;
   }
 
   void _iniciarSeguimiento() {
@@ -82,17 +108,28 @@ class _LocationMapScreenState
     );
   }
 
-  LatLng get _ubicacion {
-    return LatLng(
-      _position.latitude,
-      _position.longitude,
-    );
-  }
+  // =========================
+  // CONTROLES DEL MAPA
+  // =========================
 
-  void _centrarMapa() {
+  void _centrarEnMi() {
     _mapController.move(
       _ubicacion,
       17,
+    );
+  }
+
+  void _centrarEnLugar() {
+    final lugar =
+        widget.targetPosition;
+
+    if (lugar == null) {
+      return;
+    }
+
+    _mapController.move(
+      lugar,
+      18,
     );
   }
 
@@ -132,7 +169,12 @@ class _LocationMapScreenState
     );
   }
 
-  Future<void> _actualizarUbicacion() async {
+  // =========================
+  // ACTUALIZAR UBICACIÓN
+  // =========================
+
+  Future<void> _actualizarUbicacion()
+      async {
     if (_actualizando) {
       return;
     }
@@ -158,7 +200,7 @@ class _LocationMapScreenState
             DateTime.now();
       });
 
-      _centrarMapa();
+      _centrarEnMi();
 
       ScaffoldMessenger.of(context)
           .showSnackBar(
@@ -190,7 +232,12 @@ class _LocationMapScreenState
     }
   }
 
-  Future<void> _guardarUbicacionHistorial()
+  // =========================
+  // GUARDAR EN HISTORIAL
+  // =========================
+
+  Future<void>
+      _guardarUbicacionHistorial()
       async {
     if (_guardandoHistorial) {
       return;
@@ -201,8 +248,6 @@ class _LocationMapScreenState
     });
 
     try {
-      // Guardamos exactamente la posición
-      // que estamos mostrando actualmente.
       await LocationService
           .guardarPosicion(
         _position,
@@ -247,6 +292,10 @@ class _LocationMapScreenState
     }
   }
 
+  // =========================
+  // CREAR MARCADOR
+  // =========================
+
   Future<void> _crearMarcador(
     LatLng punto,
   ) async {
@@ -259,6 +308,10 @@ class _LocationMapScreenState
       ),
     );
   }
+
+  // =========================
+  // VER MARCADOR
+  // =========================
 
   Future<void> _mostrarMarcador({
     required String id,
@@ -293,7 +346,8 @@ class _LocationMapScreenState
                 Row(
                   children: [
                     const Icon(
-                      Icons.location_on_outlined,
+                      Icons
+                          .location_on_outlined,
                       size: 30,
                     ),
 
@@ -321,6 +375,7 @@ class _LocationMapScreenState
                   const SizedBox(
                     height: 14,
                   ),
+
                   Text(
                     descripcion,
                     style:
@@ -382,6 +437,10 @@ class _LocationMapScreenState
     );
   }
 
+  // =========================
+  // ELIMINAR MARCADOR
+  // =========================
+
   Future<void> _confirmarEliminar({
     required String id,
     required String nombre,
@@ -412,6 +471,7 @@ class _LocationMapScreenState
                 'Cancelar',
               ),
             ),
+
             FilledButton(
               onPressed: () {
                 Navigator.of(
@@ -465,6 +525,10 @@ class _LocationMapScreenState
     }
   }
 
+  // =========================
+  // HORA
+  // =========================
+
   String _horaActualizacion() {
     final hora =
         _ultimaActualizacion.hour
@@ -493,6 +557,10 @@ class _LocationMapScreenState
     return '$hora:$minuto:$segundo';
   }
 
+  // =========================
+  // MARCADOR DEL USUARIO
+  // =========================
+
   Marker _marcadorUsuario() {
     return Marker(
       point: _ubicacion,
@@ -507,6 +575,7 @@ class _LocationMapScreenState
             size: 52,
             color: Colors.red,
           ),
+
           Text(
             'Tú estás aquí',
             style: TextStyle(
@@ -519,6 +588,51 @@ class _LocationMapScreenState
       ),
     );
   }
+
+  // =========================
+  // MARCADOR TEMPORAL
+  // =========================
+
+  Marker _marcadorTemporalDestino() {
+    final punto =
+        widget.targetPosition!;
+
+    return Marker(
+      point: punto,
+      width: 120,
+      height: 95,
+      child: Column(
+        mainAxisSize:
+            MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.location_on,
+            size: 55,
+            color: Theme.of(context)
+                .colorScheme
+                .tertiary,
+          ),
+
+          Text(
+            widget.targetName ??
+                'Lugar guardado',
+            maxLines: 1,
+            overflow:
+                TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight:
+                  FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // =========================
+  // MARCADOR FIRESTORE
+  // =========================
 
   Marker _crearMarcadorGuardado(
     QueryDocumentSnapshot<
@@ -550,13 +664,19 @@ class _LocationMapScreenState
                 ?.toDouble() ??
             0;
 
+    final seleccionado =
+        documento.id ==
+            widget.targetMarkerId;
+
     return Marker(
       point: LatLng(
         latitud,
         longitud,
       ),
-      width: 90,
-      height: 80,
+      width:
+          seleccionado ? 120 : 90,
+      height:
+          seleccionado ? 95 : 80,
       child: GestureDetector(
         behavior:
             HitTestBehavior.opaque,
@@ -575,16 +695,27 @@ class _LocationMapScreenState
               MainAxisSize.min,
           children: [
             Icon(
-              Icons.place,
-              size: 45,
-              color: Theme.of(context)
-                  .colorScheme
-                  .primary,
+              seleccionado
+                  ? Icons.location_on
+                  : Icons.place,
+              size:
+                  seleccionado ? 55 : 45,
+              color: seleccionado
+                  ? Theme.of(context)
+                      .colorScheme
+                      .tertiary
+                  : Theme.of(context)
+                      .colorScheme
+                      .primary,
             ),
+
             Container(
               constraints:
-                  const BoxConstraints(
-                maxWidth: 90,
+                  BoxConstraints(
+                maxWidth:
+                    seleccionado
+                        ? 120
+                        : 90,
               ),
               child: Text(
                 nombre,
@@ -593,11 +724,15 @@ class _LocationMapScreenState
                     TextOverflow.ellipsis,
                 textAlign:
                     TextAlign.center,
-                style:
-                    const TextStyle(
-                  fontSize: 11,
+                style: TextStyle(
+                  fontSize:
+                      seleccionado
+                          ? 12
+                          : 11,
                   fontWeight:
-                      FontWeight.w600,
+                      seleccionado
+                          ? FontWeight.bold
+                          : FontWeight.w600,
                 ),
               ),
             ),
@@ -609,21 +744,33 @@ class _LocationMapScreenState
 
   @override
   void dispose() {
-    _positionSubscription?.cancel();
+    _positionSubscription
+        ?.cancel();
+
     _mapController.dispose();
 
     super.dispose();
   }
 
+  // =========================
+  // UI
+  // =========================
+
   @override
   Widget build(
     BuildContext context,
   ) {
+    final viendoLugar =
+        widget.targetPosition != null;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Mi mapa',
-          style: TextStyle(
+        title: Text(
+          viendoLugar
+              ? widget.targetName ??
+                  'Lugar guardado'
+              : 'Mi mapa',
+          style: const TextStyle(
             fontWeight:
                 FontWeight.bold,
           ),
@@ -639,11 +786,16 @@ class _LocationMapScreenState
                       _mapController,
                   options: MapOptions(
                     initialCenter:
-                        _ubicacion,
-                    initialZoom: 17,
+                        _centroInicial,
+                    initialZoom:
+                        viendoLugar
+                            ? 18
+                            : 17,
                     minZoom: 3,
                     maxZoom: 19,
 
+                    // Mantén presionado
+                    // para crear un lugar.
                     onLongPress: (
                       _,
                       punto,
@@ -694,11 +846,37 @@ class _LocationMapScreenState
                           _marcadorUsuario(),
                         ];
 
+                        bool encontroDestino =
+                            false;
+
                         if (snapshot.hasData) {
-                          marcadores.addAll(
-                            snapshot.data!.docs.map(
-                              _crearMarcadorGuardado,
-                            ),
+                          for (final documento
+                              in snapshot
+                                  .data!
+                                  .docs) {
+                            if (documento.id ==
+                                widget
+                                    .targetMarkerId) {
+                              encontroDestino =
+                                  true;
+                            }
+
+                            marcadores.add(
+                              _crearMarcadorGuardado(
+                                documento,
+                              ),
+                            );
+                          }
+                        }
+
+                        // Si por alguna razón
+                        // Firestore todavía no cargó,
+                        // mostramos temporalmente
+                        // el lugar seleccionado.
+                        if (viendoLugar &&
+                            !encontroDestino) {
+                          marcadores.add(
+                            _marcadorTemporalDestino(),
                           );
                         }
 
@@ -717,7 +895,10 @@ class _LocationMapScreenState
                   ],
                 ),
 
-                // Instrucción para crear marcador.
+                // =====================
+                // MENSAJE SUPERIOR
+                // =====================
+
                 Positioned(
                   left: 16,
                   top: 16,
@@ -727,7 +908,8 @@ class _LocationMapScreenState
                       maxWidth: 230,
                     ),
                     padding:
-                        const EdgeInsets.symmetric(
+                        const EdgeInsets
+                            .symmetric(
                       horizontal: 12,
                       vertical: 9,
                     ),
@@ -738,7 +920,8 @@ class _LocationMapScreenState
                               .colorScheme
                               .surface,
                       borderRadius:
-                          BorderRadius.circular(
+                          BorderRadius
+                              .circular(
                         14,
                       ),
                       boxShadow: const [
@@ -749,22 +932,30 @@ class _LocationMapScreenState
                         ),
                       ],
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize:
                           MainAxisSize.min,
                       children: [
                         Icon(
-                          Icons.touch_app_outlined,
+                          viendoLugar
+                              ? Icons
+                                  .bookmark_outlined
+                              : Icons
+                                  .touch_app_outlined,
                           size: 20,
                         ),
-                        SizedBox(
+
+                        const SizedBox(
                           width: 8,
                         ),
+
                         Flexible(
                           child: Text(
-                            'Mantén presionado para guardar un lugar.',
+                            viendoLugar
+                                ? 'Viendo: ${widget.targetName ?? 'Lugar guardado'}'
+                                : 'Mantén presionado para guardar un lugar.',
                             style:
-                                TextStyle(
+                                const TextStyle(
                               fontSize: 12,
                             ),
                           ),
@@ -774,7 +965,10 @@ class _LocationMapScreenState
                   ),
                 ),
 
-                // Controles de zoom.
+                // =====================
+                // ZOOM
+                // =====================
+
                 Positioned(
                   right: 16,
                   top: 16,
@@ -794,6 +988,7 @@ class _LocationMapScreenState
                             Icons.add,
                           ),
                         ),
+
                         Container(
                           width: 32,
                           height: 1,
@@ -801,6 +996,7 @@ class _LocationMapScreenState
                               .grey
                               .shade300,
                         ),
+
                         IconButton(
                           tooltip:
                               'Alejar',
@@ -816,27 +1012,62 @@ class _LocationMapScreenState
                   ),
                 ),
 
-                // Volver a mi posición.
+                // =====================
+                // CENTRAR MAPA
+                // =====================
+
                 Positioned(
                   right: 16,
                   bottom: 18,
-                  child:
+                  child: Column(
+                    mainAxisSize:
+                        MainAxisSize.min,
+                    children: [
+                      // Si venimos de
+                      // Mis lugares,
+                      // aparece un botón
+                      // para regresar al marcador.
+                      if (viendoLugar) ...[
+                        FloatingActionButton.small(
+                          heroTag:
+                              'centrarLugar',
+                          onPressed:
+                              _centrarEnLugar,
+                          tooltip:
+                              'Ver lugar guardado',
+                          child:
+                              const Icon(
+                            Icons.place,
+                          ),
+                        ),
+
+                        const SizedBox(
+                          height: 10,
+                        ),
+                      ],
+
                       FloatingActionButton.small(
-                    heroTag:
-                        'centrarMapa',
-                    onPressed:
-                        _centrarMapa,
-                    tooltip:
-                        'Volver a mi ubicación',
-                    child:
-                        const Icon(
-                      Icons.my_location,
-                    ),
+                        heroTag:
+                            'centrarMiUbicacion',
+                        onPressed:
+                            _centrarEnMi,
+                        tooltip:
+                            'Volver a mi ubicación',
+                        child:
+                            const Icon(
+                          Icons.my_location,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
+
+          // =========================
+          // PANEL INFERIOR
+          // =========================
 
           Container(
             width:
@@ -855,11 +1086,14 @@ class _LocationMapScreenState
                 const Row(
                   children: [
                     Icon(
-                      Icons.location_on_outlined,
+                      Icons
+                          .location_on_outlined,
                     ),
+
                     SizedBox(
                       width: 8,
                     ),
+
                     Text(
                       'Tu ubicación',
                       style:
@@ -882,9 +1116,11 @@ class _LocationMapScreenState
                       Icons.gps_fixed,
                       size: 17,
                     ),
+
                     const SizedBox(
                       width: 7,
                     ),
+
                     Expanded(
                       child: Text(
                         'Precisión aproximada: '
@@ -904,9 +1140,11 @@ class _LocationMapScreenState
                       Icons.access_time,
                       size: 17,
                     ),
+
                     const SizedBox(
                       width: 7,
                     ),
+
                     Text(
                       'Última actualización: '
                       '${_horaActualizacion()}',
@@ -935,7 +1173,8 @@ class _LocationMapScreenState
                                 height: 18,
                                 child:
                                     CircularProgressIndicator(
-                                  strokeWidth: 2,
+                                  strokeWidth:
+                                      2,
                                 ),
                               )
                             : const Icon(
@@ -970,7 +1209,8 @@ class _LocationMapScreenState
                                 height: 18,
                                 child:
                                     CircularProgressIndicator(
-                                  strokeWidth: 2,
+                                  strokeWidth:
+                                      2,
                                 ),
                               )
                             : const Icon(
