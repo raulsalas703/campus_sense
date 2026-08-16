@@ -20,7 +20,7 @@ Future<void> main() async {
           create: (_) => ThemeProvider(),
         ),
       ],
-      child: const CampusSenseApp(),
+      child: const GeoSenseApp(),
     ),
   );
 }

@@ -20,7 +20,7 @@ class HomeScreen extends StatelessWidget {
   ) async {
     final salir = await showDialog<bool>(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
           title: const Text(
             'Cerrar sesión',
@@ -32,7 +32,7 @@ class HomeScreen extends StatelessWidget {
             TextButton(
               onPressed: () {
                 Navigator.pop(
-                  context,
+                  dialogContext,
                   false,
                 );
               },
@@ -43,7 +43,7 @@ class HomeScreen extends StatelessWidget {
             FilledButton(
               onPressed: () {
                 Navigator.pop(
-                  context,
+                  dialogContext,
                   true,
                 );
               },
@@ -147,11 +147,9 @@ class HomeScreen extends StatelessWidget {
                     colorScheme.primary,
                 size: 25,
               ),
-
               const SizedBox(
                 height: 7,
               ),
-
               Text(
                 label,
                 style: const TextStyle(
@@ -222,11 +220,9 @@ class HomeScreen extends StatelessWidget {
                       colorScheme.primary,
                 ),
               ),
-
               const SizedBox(
                 width: 16,
               ),
-
               Expanded(
                 child: Column(
                   crossAxisAlignment:
@@ -242,11 +238,9 @@ class HomeScreen extends StatelessWidget {
                             FontWeight.bold,
                       ),
                     ),
-
                     const SizedBox(
                       height: 5,
                     ),
-
                     Text(
                       description,
                       style: TextStyle(
@@ -259,11 +253,9 @@ class HomeScreen extends StatelessWidget {
                   ],
                 ),
               ),
-
               const SizedBox(
                 width: 10,
               ),
-
               Container(
                 width: 34,
                 height: 34,
@@ -321,6 +313,24 @@ class HomeScreen extends StatelessWidget {
             body: Center(
               child:
                   CircularProgressIndicator(),
+            ),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Scaffold(
+            body: Center(
+              child: Padding(
+                padding:
+                    const EdgeInsets.all(
+                  24,
+                ),
+                child: Text(
+                  'No se pudo cargar tu información:\n${snapshot.error}',
+                  textAlign:
+                      TextAlign.center,
+                ),
+              ),
             ),
           );
         }
@@ -393,11 +403,9 @@ class HomeScreen extends StatelessWidget {
                     size: 23,
                   ),
                 ),
-
                 const SizedBox(
                   width: 11,
                 ),
-
                 const Text(
                   'GeoSense',
                   style: TextStyle(
@@ -415,54 +423,50 @@ class HomeScreen extends StatelessWidget {
                   0,
                   50,
                 ),
+
+                // IMPORTANTE:
+                // ya no usamos async/await aquí.
                 onSelected: (value) {
-                  WidgetsBinding
-                      .instance
-                      .addPostFrameCallback(
-                    (_) async {
-                      if (!context
-                          .mounted) {
-                        return;
-                      }
+                  if (value ==
+                      'profile') {
+                    Navigator.of(
+                      context,
+                    ).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            const ProfileScreen(),
+                      ),
+                    );
 
-                      if (value ==
-                          'profile') {
-                        await Navigator.of(
-                          context,
-                        ).push(
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                const ProfileScreen(),
-                          ),
-                        );
-                      }
+                    return;
+                  }
 
-                      if (value ==
-                          'settings') {
-                        await Navigator.of(
-                          context,
-                        ).push(
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                const SettingsScreen(),
-                          ),
-                        );
-                      }
+                  if (value ==
+                      'settings') {
+                    Navigator.of(
+                      context,
+                    ).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            const SettingsScreen(),
+                      ),
+                    );
 
-                      if (value ==
-                          'logout') {
-                        await _confirmarSalir(
-                          context,
-                        );
-                      }
-                    },
-                  );
+                    return;
+                  }
+
+                  if (value ==
+                      'logout') {
+                    _confirmarSalir(
+                      context,
+                    );
+                  }
                 },
+
                 itemBuilder:
-                    (context) {
+                    (menuContext) {
                   return [
-                    PopupMenuItem<
-                        String>(
+                    PopupMenuItem<String>(
                       enabled: false,
                       child: Column(
                         crossAxisAlignment:
@@ -478,29 +482,23 @@ class HomeScreen extends StatelessWidget {
                                       .bold,
                             ),
                           ),
-
                           const SizedBox(
                             height: 4,
                           ),
-
                           Text(
                             correo,
                             style:
                                 const TextStyle(
-                              fontSize:
-                                  12,
+                              fontSize: 12,
                             ),
                           ),
                         ],
                       ),
                     ),
-
                     const PopupMenuDivider(),
-
                     const PopupMenuItem<
                         String>(
-                      value:
-                          'profile',
+                      value: 'profile',
                       child: Row(
                         children: [
                           Icon(
@@ -516,11 +514,9 @@ class HomeScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-
                     const PopupMenuItem<
                         String>(
-                      value:
-                          'settings',
+                      value: 'settings',
                       child: Row(
                         children: [
                           Icon(
@@ -536,13 +532,10 @@ class HomeScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-
                     const PopupMenuDivider(),
-
                     const PopupMenuItem<
                         String>(
-                      value:
-                          'logout',
+                      value: 'logout',
                       child: Row(
                         children: [
                           Icon(
@@ -583,7 +576,6 @@ class HomeScreen extends StatelessWidget {
               ),
             ],
           ),
-
           body: SafeArea(
             child: Center(
               child: ConstrainedBox(
@@ -605,9 +597,6 @@ class HomeScreen extends StatelessWidget {
                         CrossAxisAlignment
                             .start,
                     children: [
-                      // =================
-                      // CABECERA
-                      // =================
                       Container(
                         width:
                             double.infinity,
@@ -646,11 +635,9 @@ class HomeScreen extends StatelessWidget {
                             Row(
                               children: [
                                 CircleAvatar(
-                                  radius:
-                                      25,
+                                  radius: 25,
                                   backgroundColor:
-                                      Colors
-                                          .white
+                                      Colors.white
                                           .withValues(
                                     alpha:
                                         0.18,
@@ -669,12 +656,9 @@ class HomeScreen extends StatelessWidget {
                                     ),
                                   ),
                                 ),
-
                                 const SizedBox(
-                                  width:
-                                      14,
+                                  width: 14,
                                 ),
-
                                 Expanded(
                                   child:
                                       Column(
@@ -692,13 +676,12 @@ class HomeScreen extends StatelessWidget {
                                               14,
                                         ),
                                       ),
-
                                       Text(
                                         nombre,
-                                        maxLines:
-                                            1,
+                                        maxLines: 1,
                                         overflow:
-                                            TextOverflow.ellipsis,
+                                            TextOverflow
+                                                .ellipsis,
                                         style:
                                             const TextStyle(
                                           color:
@@ -714,48 +697,39 @@ class HomeScreen extends StatelessWidget {
                                 ),
                               ],
                             ),
-
                             const SizedBox(
                               height: 24,
                             ),
-
                             const Text(
                               'Tus lugares, siempre contigo.',
                               style:
                                   TextStyle(
                                 color:
                                     Colors.white,
-                                fontSize:
-                                    24,
+                                fontSize: 24,
                                 fontWeight:
                                     FontWeight.bold,
                               ),
                             ),
-
                             const SizedBox(
                               height: 8,
                             ),
-
                             const Text(
                               'Explora tu ubicación, guarda lugares importantes y consulta tu historial.',
                               style:
                                   TextStyle(
                                 color:
                                     Colors.white70,
-                                fontSize:
-                                    14,
-                                height:
-                                    1.45,
+                                fontSize: 14,
+                                height: 1.45,
                               ),
                             ),
                           ],
                         ),
                       ),
-
                       const SizedBox(
                         height: 20,
                       ),
-
                       Row(
                         children: [
                           _actionButton(
@@ -777,11 +751,9 @@ class HomeScreen extends StatelessWidget {
                               );
                             },
                           ),
-
                           const SizedBox(
                             width: 12,
                           ),
-
                           _actionButton(
                             context:
                                 context,
@@ -803,11 +775,9 @@ class HomeScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-
                       const SizedBox(
                         height: 30,
                       ),
-
                       const Text(
                         'Explora',
                         style:
@@ -817,11 +787,9 @@ class HomeScreen extends StatelessWidget {
                               FontWeight.bold,
                         ),
                       ),
-
                       const SizedBox(
                         height: 6,
                       ),
-
                       Text(
                         'Todo lo que necesitas en un solo lugar.',
                         style: TextStyle(
@@ -830,11 +798,9 @@ class HomeScreen extends StatelessWidget {
                                   .onSurfaceVariant,
                         ),
                       ),
-
                       const SizedBox(
                         height: 18,
                       ),
-
                       _featureCard(
                         context:
                             context,
@@ -850,7 +816,6 @@ class HomeScreen extends StatelessWidget {
                           );
                         },
                       ),
-
                       _featureCard(
                         context:
                             context,
@@ -871,7 +836,6 @@ class HomeScreen extends StatelessWidget {
                           );
                         },
                       ),
-
                       _featureCard(
                         context:
                             context,
@@ -892,7 +856,6 @@ class HomeScreen extends StatelessWidget {
                           );
                         },
                       ),
-
                       _featureCard(
                         context:
                             context,
