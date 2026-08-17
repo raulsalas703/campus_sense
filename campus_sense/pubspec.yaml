@@ -1,5 +1,5 @@
 name: campus_sense
-description: "Campus Sense - ubicación y servicios del campus."
+description: "GeoSense - ubicación y servicios del campus."
 publish_to: 'none'
 
 version: 1.0.0+1

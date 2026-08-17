@@ -247,7 +247,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           // NOMBRE DE LA APP
                           // ==========================
                           const Text(
-                            'Campus Sense',
+                            'GeoSense',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 30,
