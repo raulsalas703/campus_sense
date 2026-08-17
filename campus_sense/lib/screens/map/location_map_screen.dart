@@ -5,16 +5,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../services/location_service.dart';
 import '../../services/marker_service.dart';
 import 'create_marker_screen.dart';
 
-class LocationMapScreen extends StatefulWidget {
+class LocationMapScreen
+    extends StatefulWidget {
   final Position initialPosition;
 
-  // Si entramos desde "Mis lugares",
-  // estos datos indican qué marcador mostrar.
   final String? targetMarkerId;
   final LatLng? targetPosition;
   final String? targetName;
@@ -28,8 +28,9 @@ class LocationMapScreen extends StatefulWidget {
   });
 
   @override
-  State<LocationMapScreen> createState() =>
-      _LocationMapScreenState();
+  State<LocationMapScreen>
+      createState() =>
+          _LocationMapScreenState();
 }
 
 class _LocationMapScreenState
@@ -46,19 +47,21 @@ class _LocationMapScreenState
       DateTime.now();
 
   bool _actualizando = false;
-  bool _guardandoHistorial = false;
+  bool _guardandoHistorial =
+      false;
 
   @override
   void initState() {
     super.initState();
 
-    _position = widget.initialPosition;
+    _position =
+        widget.initialPosition;
 
     _iniciarSeguimiento();
   }
 
   // =========================
-  // UBICACIÓN ACTUAL
+  // UBICACIÓN
   // =========================
 
   LatLng get _ubicacion {
@@ -68,8 +71,6 @@ class _LocationMapScreenState
     );
   }
 
-  // Si venimos de Mis lugares,
-  // el mapa abre centrado en ese lugar.
   LatLng get _centroInicial {
     return widget.targetPosition ??
         _ubicacion;
@@ -87,6 +88,7 @@ class _LocationMapScreenState
 
         setState(() {
           _position = position;
+
           _ultimaActualizacion =
               DateTime.now();
         });
@@ -105,6 +107,138 @@ class _LocationMapScreenState
           ),
         );
       },
+    );
+  }
+
+  // =========================
+  // DISTANCIA
+  // =========================
+
+  double _distanciaA({
+    required double latitud,
+    required double longitud,
+  }) {
+    return Geolocator.distanceBetween(
+      _position.latitude,
+      _position.longitude,
+      latitud,
+      longitud,
+    );
+  }
+
+  String _formatearDistancia(
+    double distancia,
+  ) {
+    if (distancia < 1000) {
+      return '${distancia.round()} m';
+    }
+
+    final km =
+        distancia / 1000;
+
+    if (km < 10) {
+      return '${km.toStringAsFixed(1)} km';
+    }
+
+    return '${km.round()} km';
+  }
+
+  String? get _distanciaDestino {
+    final destino =
+        widget.targetPosition;
+
+    if (destino == null) {
+      return null;
+    }
+
+    return _formatearDistancia(
+      _distanciaA(
+        latitud:
+            destino.latitude,
+        longitud:
+            destino.longitude,
+      ),
+    );
+  }
+
+  // =========================
+  // NAVEGACIÓN EXTERNA
+  // =========================
+
+  Future<void> _comoLlegar({
+    required double latitud,
+    required double longitud,
+  }) async {
+    final origen =
+        '${_position.latitude},${_position.longitude}';
+
+    final destino =
+        '$latitud,$longitud';
+
+    final uri = Uri.https(
+      'www.google.com',
+      '/maps/dir/',
+      {
+        'api': '1',
+        'origin': origen,
+        'destination':
+            destino,
+        'dir_action':
+            'navigate',
+      },
+    );
+
+    try {
+      final abierto =
+          await launchUrl(
+        uri,
+        mode:
+            LaunchMode
+                .externalApplication,
+      );
+
+      if (!abierto &&
+          mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No se pudo abrir la navegación.',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        SnackBar(
+          content: Text(
+            'No se pudo abrir la navegación: $e',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void>
+      _navegarAlDestino()
+      async {
+    final destino =
+        widget.targetPosition;
+
+    if (destino == null) {
+      return;
+    }
+
+    await _comoLlegar(
+      latitud:
+          destino.latitude,
+      longitud:
+          destino.longitude,
     );
   }
 
@@ -135,7 +269,8 @@ class _LocationMapScreenState
 
   void _acercar() {
     final zoomActual =
-        _mapController.camera.zoom;
+        _mapController
+            .camera.zoom;
 
     final nuevoZoom =
         (zoomActual + 1)
@@ -146,14 +281,16 @@ class _LocationMapScreenState
             .toDouble();
 
     _mapController.move(
-      _mapController.camera.center,
+      _mapController
+          .camera.center,
       nuevoZoom,
     );
   }
 
   void _alejar() {
     final zoomActual =
-        _mapController.camera.zoom;
+        _mapController
+            .camera.zoom;
 
     final nuevoZoom =
         (zoomActual - 1)
@@ -164,7 +301,8 @@ class _LocationMapScreenState
             .toDouble();
 
     _mapController.move(
-      _mapController.camera.center,
+      _mapController
+          .camera.center,
       nuevoZoom,
     );
   }
@@ -173,7 +311,8 @@ class _LocationMapScreenState
   // ACTUALIZAR UBICACIÓN
   // =========================
 
-  Future<void> _actualizarUbicacion()
+  Future<void>
+      _actualizarUbicacion()
       async {
     if (_actualizando) {
       return;
@@ -226,14 +365,15 @@ class _LocationMapScreenState
     } finally {
       if (mounted) {
         setState(() {
-          _actualizando = false;
+          _actualizando =
+              false;
         });
       }
     }
   }
 
   // =========================
-  // GUARDAR EN HISTORIAL
+  // HISTORIAL
   // =========================
 
   Future<void>
@@ -244,7 +384,8 @@ class _LocationMapScreenState
     }
 
     setState(() {
-      _guardandoHistorial = true;
+      _guardandoHistorial =
+          true;
     });
 
     try {
@@ -286,7 +427,8 @@ class _LocationMapScreenState
     } finally {
       if (mounted) {
         setState(() {
-          _guardandoHistorial = false;
+          _guardandoHistorial =
+              false;
         });
       }
     }
@@ -299,7 +441,8 @@ class _LocationMapScreenState
   Future<void> _crearMarcador(
     LatLng punto,
   ) async {
-    await Navigator.of(context).push(
+    await Navigator.of(context)
+        .push(
       MaterialPageRoute(
         builder: (_) =>
             CreateMarkerScreen(
@@ -324,14 +467,28 @@ class _LocationMapScreenState
       return;
     }
 
+    final distancia =
+        _distanciaA(
+      latitud: latitud,
+      longitud:
+          longitud,
+    );
+
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
-      builder: (sheetContext) {
+      builder:
+          (sheetContext) {
+        final colorScheme =
+            Theme.of(
+          sheetContext,
+        ).colorScheme;
+
         return SafeArea(
           child: Padding(
             padding:
-                const EdgeInsets.fromLTRB(
+                const EdgeInsets
+                    .fromLTRB(
               24,
               8,
               24,
@@ -339,31 +496,91 @@ class _LocationMapScreenState
             ),
             child: Column(
               mainAxisSize:
-                  MainAxisSize.min,
+                  MainAxisSize
+                      .min,
               crossAxisAlignment:
-                  CrossAxisAlignment.start,
+                  CrossAxisAlignment
+                      .start,
               children: [
                 Row(
                   children: [
-                    const Icon(
-                      Icons
-                          .location_on_outlined,
-                      size: 30,
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration:
+                          BoxDecoration(
+                        color:
+                            colorScheme
+                                .primaryContainer,
+                        borderRadius:
+                            BorderRadius
+                                .circular(
+                          15,
+                        ),
+                      ),
+                      child: Icon(
+                        Icons
+                            .location_on,
+                        color:
+                            colorScheme
+                                .primary,
+                      ),
                     ),
 
                     const SizedBox(
-                      width: 10,
+                      width: 12,
                     ),
 
                     Expanded(
-                      child: Text(
-                        nombre,
-                        style:
-                            const TextStyle(
-                          fontSize: 21,
-                          fontWeight:
-                              FontWeight.bold,
-                        ),
+                      child: Column(
+                        crossAxisAlignment:
+                            CrossAxisAlignment
+                                .start,
+                        children: [
+                          Text(
+                            nombre,
+                            style:
+                                const TextStyle(
+                              fontSize:
+                                  20,
+                              fontWeight:
+                                  FontWeight.bold,
+                            ),
+                          ),
+
+                          const SizedBox(
+                            height: 3,
+                          ),
+
+                          Row(
+                            children: [
+                              Icon(
+                                Icons
+                                    .near_me_outlined,
+                                size: 16,
+                                color:
+                                    colorScheme
+                                        .primary,
+                              ),
+
+                              const SizedBox(
+                                width: 5,
+                              ),
+
+                              Text(
+                                '${_formatearDistancia(distancia)} de ti',
+                                style:
+                                    TextStyle(
+                                  color:
+                                      colorScheme
+                                          .primary,
+                                  fontWeight:
+                                      FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -373,7 +590,7 @@ class _LocationMapScreenState
                     .trim()
                     .isNotEmpty) ...[
                   const SizedBox(
-                    height: 14,
+                    height: 18,
                   ),
 
                   Text(
@@ -389,20 +606,81 @@ class _LocationMapScreenState
                   height: 18,
                 ),
 
-                Text(
-                  'Latitud: ${latitud.toStringAsFixed(6)}',
+                Container(
+                  width:
+                      double.infinity,
+                  padding:
+                      const EdgeInsets
+                          .all(
+                    14,
+                  ),
+                  decoration:
+                      BoxDecoration(
+                    color:
+                        colorScheme
+                            .surfaceContainerHighest,
+                    borderRadius:
+                        BorderRadius
+                            .circular(
+                      15,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment:
+                        CrossAxisAlignment
+                            .start,
+                    children: [
+                      Text(
+                        'Latitud: ${latitud.toStringAsFixed(6)}',
+                      ),
+
+                      const SizedBox(
+                        height: 5,
+                      ),
+
+                      Text(
+                        'Longitud: ${longitud.toStringAsFixed(6)}',
+                      ),
+                    ],
+                  ),
                 ),
 
                 const SizedBox(
-                  height: 5,
+                  height: 18,
                 ),
 
-                Text(
-                  'Longitud: ${longitud.toStringAsFixed(6)}',
+                SizedBox(
+                  width:
+                      double.infinity,
+                  height: 50,
+                  child:
+                      FilledButton.icon(
+                    onPressed: () {
+                      Navigator.of(
+                        sheetContext,
+                      ).pop();
+
+                      _comoLlegar(
+                        latitud:
+                            latitud,
+                        longitud:
+                            longitud,
+                      );
+                    },
+                    icon:
+                        const Icon(
+                      Icons
+                          .directions_outlined,
+                    ),
+                    label:
+                        const Text(
+                      'Cómo llegar',
+                    ),
+                  ),
                 ),
 
                 const SizedBox(
-                  height: 22,
+                  height: 10,
                 ),
 
                 SizedBox(
@@ -410,7 +688,8 @@ class _LocationMapScreenState
                       double.infinity,
                   child:
                       OutlinedButton.icon(
-                    onPressed: () async {
+                    onPressed:
+                        () async {
                       Navigator.of(
                         sheetContext,
                       ).pop();
@@ -421,10 +700,13 @@ class _LocationMapScreenState
                             nombre,
                       );
                     },
-                    icon: const Icon(
-                      Icons.delete_outline,
+                    icon:
+                        const Icon(
+                      Icons
+                          .delete_outline,
                     ),
-                    label: const Text(
+                    label:
+                        const Text(
                       'Eliminar marcador',
                     ),
                   ),
@@ -438,7 +720,7 @@ class _LocationMapScreenState
   }
 
   // =========================
-  // ELIMINAR MARCADOR
+  // ELIMINAR
   // =========================
 
   Future<void> _confirmarEliminar({
@@ -452,9 +734,11 @@ class _LocationMapScreenState
     final confirmar =
         await showDialog<bool>(
       context: context,
-      builder: (dialogContext) {
+      builder:
+          (dialogContext) {
         return AlertDialog(
-          title: const Text(
+          title:
+              const Text(
             'Eliminar marcador',
           ),
           content: Text(
@@ -465,20 +749,25 @@ class _LocationMapScreenState
               onPressed: () {
                 Navigator.of(
                   dialogContext,
-                ).pop(false);
+                ).pop(
+                  false,
+                );
               },
-              child: const Text(
+              child:
+                  const Text(
                 'Cancelar',
               ),
             ),
-
             FilledButton(
               onPressed: () {
                 Navigator.of(
                   dialogContext,
-                ).pop(true);
+                ).pop(
+                  true,
+                );
               },
-              child: const Text(
+              child:
+                  const Text(
                 'Eliminar',
               ),
             ),
@@ -531,7 +820,8 @@ class _LocationMapScreenState
 
   String _horaActualizacion() {
     final hora =
-        _ultimaActualizacion.hour
+        _ultimaActualizacion
+            .hour
             .toString()
             .padLeft(
               2,
@@ -539,7 +829,8 @@ class _LocationMapScreenState
             );
 
     final minuto =
-        _ultimaActualizacion.minute
+        _ultimaActualizacion
+            .minute
             .toString()
             .padLeft(
               2,
@@ -547,7 +838,8 @@ class _LocationMapScreenState
             );
 
     final segundo =
-        _ultimaActualizacion.second
+        _ultimaActualizacion
+            .second
             .toString()
             .padLeft(
               2,
@@ -558,27 +850,31 @@ class _LocationMapScreenState
   }
 
   // =========================
-  // MARCADOR DEL USUARIO
+  // MARCADOR USUARIO
   // =========================
 
   Marker _marcadorUsuario() {
     return Marker(
-      point: _ubicacion,
+      point:
+          _ubicacion,
       width: 110,
       height: 90,
-      child: const Column(
+      child:
+          const Column(
         mainAxisSize:
             MainAxisSize.min,
         children: [
           Icon(
-            Icons.location_pin,
+            Icons
+                .location_pin,
             size: 52,
-            color: Colors.red,
+            color:
+                Colors.red,
           ),
-
           Text(
             'Tú estás aquí',
-            style: TextStyle(
+            style:
+                TextStyle(
               fontSize: 12,
               fontWeight:
                   FontWeight.bold,
@@ -593,33 +889,37 @@ class _LocationMapScreenState
   // MARCADOR TEMPORAL
   // =========================
 
-  Marker _marcadorTemporalDestino() {
+  Marker
+      _marcadorTemporalDestino() {
     final punto =
         widget.targetPosition!;
 
     return Marker(
       point: punto,
-      width: 120,
+      width: 125,
       height: 95,
       child: Column(
         mainAxisSize:
             MainAxisSize.min,
         children: [
           Icon(
-            Icons.location_on,
+            Icons
+                .location_on,
             size: 55,
-            color: Theme.of(context)
-                .colorScheme
-                .tertiary,
+            color:
+                Theme.of(context)
+                    .colorScheme
+                    .tertiary,
           ),
-
           Text(
             widget.targetName ??
                 'Lugar guardado',
             maxLines: 1,
             overflow:
-                TextOverflow.ellipsis,
-            style: const TextStyle(
+                TextOverflow
+                    .ellipsis,
+            style:
+                const TextStyle(
               fontSize: 12,
               fontWeight:
                   FontWeight.bold,
@@ -655,12 +955,14 @@ class _LocationMapScreenState
             '';
 
     final latitud =
-        (datos['latitud'] as num?)
+        (datos['latitud']
+                    as num?)
                 ?.toDouble() ??
             0;
 
     final longitud =
-        (datos['longitud'] as num?)
+        (datos['longitud']
+                    as num?)
                 ?.toDouble() ??
             0;
 
@@ -674,66 +976,79 @@ class _LocationMapScreenState
         longitud,
       ),
       width:
-          seleccionado ? 120 : 90,
+          seleccionado
+              ? 125
+              : 95,
       height:
-          seleccionado ? 95 : 80,
-      child: GestureDetector(
+          seleccionado
+              ? 95
+              : 82,
+      child:
+          GestureDetector(
         behavior:
-            HitTestBehavior.opaque,
+            HitTestBehavior
+                .opaque,
         onTap: () {
           _mostrarMarcador(
-            id: documento.id,
-            nombre: nombre,
+            id:
+                documento.id,
+            nombre:
+                nombre,
             descripcion:
                 descripcion,
-            latitud: latitud,
-            longitud: longitud,
+            latitud:
+                latitud,
+            longitud:
+                longitud,
           );
         },
         child: Column(
           mainAxisSize:
-              MainAxisSize.min,
+              MainAxisSize
+                  .min,
           children: [
             Icon(
               seleccionado
-                  ? Icons.location_on
+                  ? Icons
+                      .location_on
                   : Icons.place,
               size:
-                  seleccionado ? 55 : 45,
+                  seleccionado
+                      ? 55
+                      : 45,
               color: seleccionado
-                  ? Theme.of(context)
+                  ? Theme.of(
+                      context,
+                    )
                       .colorScheme
                       .tertiary
-                  : Theme.of(context)
+                  : Theme.of(
+                      context,
+                    )
                       .colorScheme
                       .primary,
             ),
-
-            Container(
-              constraints:
-                  BoxConstraints(
-                maxWidth:
+            Text(
+              nombre,
+              maxLines:
+                  1,
+              overflow:
+                  TextOverflow
+                      .ellipsis,
+              textAlign:
+                  TextAlign.center,
+              style:
+                  TextStyle(
+                fontSize:
                     seleccionado
-                        ? 120
-                        : 90,
-              ),
-              child: Text(
-                nombre,
-                maxLines: 1,
-                overflow:
-                    TextOverflow.ellipsis,
-                textAlign:
-                    TextAlign.center,
-                style: TextStyle(
-                  fontSize:
-                      seleccionado
-                          ? 12
-                          : 11,
-                  fontWeight:
-                      seleccionado
-                          ? FontWeight.bold
-                          : FontWeight.w600,
-                ),
+                        ? 12
+                        : 11,
+                fontWeight:
+                    seleccionado
+                        ? FontWeight
+                            .bold
+                        : FontWeight
+                            .w600,
               ),
             ),
           ],
@@ -747,7 +1062,8 @@ class _LocationMapScreenState
     _positionSubscription
         ?.cancel();
 
-    _mapController.dispose();
+    _mapController
+        .dispose();
 
     super.dispose();
   }
@@ -761,7 +1077,12 @@ class _LocationMapScreenState
     BuildContext context,
   ) {
     final viendoLugar =
-        widget.targetPosition != null;
+        widget.targetPosition !=
+            null;
+
+    final colorScheme =
+        Theme.of(context)
+            .colorScheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -770,7 +1091,8 @@ class _LocationMapScreenState
               ? widget.targetName ??
                   'Lugar guardado'
               : 'Mi mapa',
-          style: const TextStyle(
+          style:
+              const TextStyle(
             fontWeight:
                 FontWeight.bold,
           ),
@@ -784,18 +1106,18 @@ class _LocationMapScreenState
                 FlutterMap(
                   mapController:
                       _mapController,
-                  options: MapOptions(
+                  options:
+                      MapOptions(
                     initialCenter:
                         _centroInicial,
                     initialZoom:
                         viendoLugar
                             ? 18
                             : 17,
-                    minZoom: 3,
-                    maxZoom: 19,
-
-                    // Mantén presionado
-                    // para crear un lugar.
+                    minZoom:
+                        3,
+                    maxZoom:
+                        19,
                     onLongPress: (
                       _,
                       punto,
@@ -804,11 +1126,11 @@ class _LocationMapScreenState
                         punto,
                       );
                     },
-
                     interactionOptions:
                         const InteractionOptions(
                       flags:
-                          InteractiveFlag.drag |
+                          InteractiveFlag
+                                  .drag |
                               InteractiveFlag
                                   .flingAnimation |
                               InteractiveFlag
@@ -835,8 +1157,9 @@ class _LocationMapScreenState
                         QuerySnapshot<
                             Map<String,
                                 dynamic>>>(
-                      stream: MarkerService
-                          .escucharMarcadores(),
+                      stream:
+                          MarkerService
+                              .escucharMarcadores(),
                       builder: (
                         context,
                         snapshot,
@@ -849,7 +1172,8 @@ class _LocationMapScreenState
                         bool encontroDestino =
                             false;
 
-                        if (snapshot.hasData) {
+                        if (snapshot
+                            .hasData) {
                           for (final documento
                               in snapshot
                                   .data!
@@ -869,10 +1193,6 @@ class _LocationMapScreenState
                           }
                         }
 
-                        // Si por alguna razón
-                        // Firestore todavía no cargó,
-                        // mostramos temporalmente
-                        // el lugar seleccionado.
                         if (viendoLugar &&
                             !encontroDestino) {
                           marcadores.add(
@@ -888,45 +1208,48 @@ class _LocationMapScreenState
                     ),
 
                     const SimpleAttributionWidget(
-                      source: Text(
+                      source:
+                          Text(
                         'OpenStreetMap contributors',
                       ),
                     ),
                   ],
                 ),
 
-                // =====================
-                // MENSAJE SUPERIOR
-                // =====================
-
+                // TEXTO SUPERIOR
                 Positioned(
                   left: 16,
                   top: 16,
-                  child: Container(
+                  child:
+                      Container(
                     constraints:
                         const BoxConstraints(
-                      maxWidth: 230,
+                      maxWidth:
+                          235,
                     ),
                     padding:
                         const EdgeInsets
                             .symmetric(
-                      horizontal: 12,
-                      vertical: 9,
+                      horizontal:
+                          12,
+                      vertical:
+                          9,
                     ),
                     decoration:
                         BoxDecoration(
                       color:
-                          Theme.of(context)
-                              .colorScheme
+                          colorScheme
                               .surface,
                       borderRadius:
                           BorderRadius
                               .circular(
                         14,
                       ),
-                      boxShadow: const [
+                      boxShadow:
+                          const [
                         BoxShadow(
-                          blurRadius: 5,
+                          blurRadius:
+                              5,
                           color:
                               Colors.black26,
                         ),
@@ -934,29 +1257,32 @@ class _LocationMapScreenState
                     ),
                     child: Row(
                       mainAxisSize:
-                          MainAxisSize.min,
+                          MainAxisSize
+                              .min,
                       children: [
                         Icon(
                           viendoLugar
                               ? Icons
-                                  .bookmark_outlined
+                                  .directions_outlined
                               : Icons
                                   .touch_app_outlined,
-                          size: 20,
+                          size:
+                              20,
                         ),
-
                         const SizedBox(
-                          width: 8,
+                          width:
+                              8,
                         ),
-
                         Flexible(
-                          child: Text(
+                          child:
+                              Text(
                             viendoLugar
-                                ? 'Viendo: ${widget.targetName ?? 'Lugar guardado'}'
+                                ? '${widget.targetName ?? 'Lugar'} • ${_distanciaDestino ?? ''}'
                                 : 'Mantén presionado para guardar un lugar.',
                             style:
                                 const TextStyle(
-                              fontSize: 12,
+                              fontSize:
+                                  12,
                             ),
                           ),
                         ),
@@ -965,18 +1291,18 @@ class _LocationMapScreenState
                   ),
                 ),
 
-                // =====================
                 // ZOOM
-                // =====================
-
                 Positioned(
                   right: 16,
                   top: 16,
-                  child: Card(
-                    elevation: 4,
+                  child:
+                      Card(
+                    elevation:
+                        4,
                     margin:
                         EdgeInsets.zero,
-                    child: Column(
+                    child:
+                        Column(
                       children: [
                         IconButton(
                           tooltip:
@@ -988,15 +1314,15 @@ class _LocationMapScreenState
                             Icons.add,
                           ),
                         ),
-
                         Container(
-                          width: 32,
-                          height: 1,
-                          color: Colors
-                              .grey
-                              .shade300,
+                          width:
+                              32,
+                          height:
+                              1,
+                          color:
+                              Colors.grey
+                                  .shade300,
                         ),
-
                         IconButton(
                           tooltip:
                               'Alejar',
@@ -1012,29 +1338,25 @@ class _LocationMapScreenState
                   ),
                 ),
 
-                // =====================
-                // CENTRAR MAPA
-                // =====================
-
+                // CENTRAR
                 Positioned(
                   right: 16,
                   bottom: 18,
-                  child: Column(
+                  child:
+                      Column(
                     mainAxisSize:
-                        MainAxisSize.min,
+                        MainAxisSize
+                            .min,
                     children: [
-                      // Si venimos de
-                      // Mis lugares,
-                      // aparece un botón
-                      // para regresar al marcador.
                       if (viendoLugar) ...[
-                        FloatingActionButton.small(
+                        FloatingActionButton
+                            .small(
                           heroTag:
                               'centrarLugar',
                           onPressed:
                               _centrarEnLugar,
                           tooltip:
-                              'Ver lugar guardado',
+                              'Ver lugar',
                           child:
                               const Icon(
                             Icons.place,
@@ -1042,20 +1364,23 @@ class _LocationMapScreenState
                         ),
 
                         const SizedBox(
-                          height: 10,
+                          height:
+                              10,
                         ),
                       ],
 
-                      FloatingActionButton.small(
+                      FloatingActionButton
+                          .small(
                         heroTag:
-                            'centrarMiUbicacion',
+                            'centrarUsuario',
                         onPressed:
                             _centrarEnMi,
                         tooltip:
-                            'Volver a mi ubicación',
+                            'Mi ubicación',
                         child:
                             const Icon(
-                          Icons.my_location,
+                          Icons
+                              .my_location,
                         ),
                       ),
                     ],
@@ -1065,15 +1390,13 @@ class _LocationMapScreenState
             ),
           ),
 
-          // =========================
           // PANEL INFERIOR
-          // =========================
-
           Container(
             width:
                 double.infinity,
             padding:
-                const EdgeInsets.fromLTRB(
+                const EdgeInsets
+                    .fromLTRB(
               20,
               16,
               20,
@@ -1081,24 +1404,111 @@ class _LocationMapScreenState
             ),
             child: Column(
               crossAxisAlignment:
-                  CrossAxisAlignment.start,
+                  CrossAxisAlignment
+                      .start,
               children: [
+                if (viendoLugar) ...[
+                  Container(
+                    width:
+                        double.infinity,
+                    padding:
+                        const EdgeInsets
+                            .all(
+                      15,
+                    ),
+                    decoration:
+                        BoxDecoration(
+                      color:
+                          colorScheme
+                              .primaryContainer,
+                      borderRadius:
+                          BorderRadius
+                              .circular(
+                        18,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons
+                              .directions_outlined,
+                          color:
+                              colorScheme
+                                  .primary,
+                          size:
+                              28,
+                        ),
+
+                        const SizedBox(
+                          width:
+                              12,
+                        ),
+
+                        Expanded(
+                          child:
+                              Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment
+                                    .start,
+                            children: [
+                              Text(
+                                widget.targetName ??
+                                    'Lugar guardado',
+                                style:
+                                    const TextStyle(
+                                  fontSize:
+                                      16,
+                                  fontWeight:
+                                      FontWeight.bold,
+                                ),
+                              ),
+
+                              const SizedBox(
+                                height:
+                                    3,
+                              ),
+
+                              Text(
+                                '${_distanciaDestino ?? '--'} de tu ubicación',
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        FilledButton(
+                          onPressed:
+                              _navegarAlDestino,
+                          child:
+                              const Text(
+                            'Ir',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(
+                    height:
+                        14,
+                  ),
+                ],
+
                 const Row(
                   children: [
                     Icon(
                       Icons
                           .location_on_outlined,
                     ),
-
                     SizedBox(
-                      width: 8,
+                      width:
+                          8,
                     ),
-
                     Text(
                       'Tu ubicación',
                       style:
                           TextStyle(
-                        fontSize: 18,
+                        fontSize:
+                            18,
                         fontWeight:
                             FontWeight.bold,
                       ),
@@ -1107,59 +1517,64 @@ class _LocationMapScreenState
                 ),
 
                 const SizedBox(
-                  height: 12,
+                  height:
+                      10,
                 ),
 
                 Row(
                   children: [
                     const Icon(
-                      Icons.gps_fixed,
-                      size: 17,
+                      Icons
+                          .gps_fixed,
+                      size:
+                          17,
                     ),
-
                     const SizedBox(
-                      width: 7,
+                      width:
+                          7,
                     ),
-
                     Expanded(
-                      child: Text(
-                        'Precisión aproximada: '
-                        '${_position.accuracy.toStringAsFixed(1)} m',
+                      child:
+                          Text(
+                        'Precisión aproximada: ${_position.accuracy.toStringAsFixed(1)} m',
                       ),
                     ),
                   ],
                 ),
 
                 const SizedBox(
-                  height: 8,
+                  height:
+                      7,
                 ),
 
                 Row(
                   children: [
                     const Icon(
-                      Icons.access_time,
-                      size: 17,
+                      Icons
+                          .access_time,
+                      size:
+                          17,
                     ),
-
                     const SizedBox(
-                      width: 7,
+                      width:
+                          7,
                     ),
-
                     Text(
-                      'Última actualización: '
-                      '${_horaActualizacion()}',
+                      'Actualizado: ${_horaActualizacion()}',
                     ),
                   ],
                 ),
 
                 const SizedBox(
-                  height: 16,
+                  height:
+                      15,
                 ),
 
                 SizedBox(
                   width:
                       double.infinity,
-                  height: 48,
+                  height:
+                      48,
                   child:
                       FilledButton.icon(
                     onPressed:
@@ -1169,8 +1584,10 @@ class _LocationMapScreenState
                     icon:
                         _guardandoHistorial
                             ? const SizedBox(
-                                width: 18,
-                                height: 18,
+                                width:
+                                    18,
+                                height:
+                                    18,
                                 child:
                                     CircularProgressIndicator(
                                   strokeWidth:
@@ -1180,7 +1597,8 @@ class _LocationMapScreenState
                             : const Icon(
                                 Icons.history,
                               ),
-                    label: Text(
+                    label:
+                        Text(
                       _guardandoHistorial
                           ? 'Guardando...'
                           : 'Guardar ubicación en historial',
@@ -1189,13 +1607,15 @@ class _LocationMapScreenState
                 ),
 
                 const SizedBox(
-                  height: 10,
+                  height:
+                      10,
                 ),
 
                 SizedBox(
                   width:
                       double.infinity,
-                  height: 48,
+                  height:
+                      48,
                   child:
                       OutlinedButton.icon(
                     onPressed:
@@ -1205,8 +1625,10 @@ class _LocationMapScreenState
                     icon:
                         _actualizando
                             ? const SizedBox(
-                                width: 18,
-                                height: 18,
+                                width:
+                                    18,
+                                height:
+                                    18,
                                 child:
                                     CircularProgressIndicator(
                                   strokeWidth:
@@ -1216,7 +1638,8 @@ class _LocationMapScreenState
                             : const Icon(
                                 Icons.refresh,
                               ),
-                    label: Text(
+                    label:
+                        Text(
                       _actualizando
                           ? 'Actualizando...'
                           : 'Actualizar ubicación',
